@@ -18,6 +18,10 @@ All generated content lives in `.liteSpec/`: active changes, topic notes in `doc
 
 Documentation stays in the project at `.liteSpec/docs/`; Obsidian compatibility does not select an external vault. Closure verifies the index, affected topic links, and current content, then reports documentation and archive paths. Missing required documentation prevents closure.
 
+Each `spec.md` records continuity (`preserve`, `extend`, `replace`, or `new`) and compatibility (`required`, `breaking-approved`, or `not-applicable`), with a concrete boundary for what to retain, replace, or migrate. This applies to code, documents, and other artifacts; tags alone do not authorize deletion. Record the policy once, without repeating it in every step.
+
+Before archiving, verify tasks, acceptance, integration, compatibility, and documentation. Explicit archive authorization is also required and may be granted in advance; implementation permission alone is insufficient. Report anything missing and record `pending-verification` or `pending-confirmation` in spec.md with the outstanding item and next action so another session can resume.
+
 ## Install
 
 Copy the complete `steps/` folder and the appropriate installer into the **root of the project where you will use SpecLite**, side by side. No Python, Node, or additional downloads are required.
@@ -45,7 +49,7 @@ Choose the agent (not the model). Installation is local to the project:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-The four skills, shared protocol, and license are copied. If any SpecLite folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
+The four skills, shared rules, and license are copied. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. If any SpecLite folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
 
 At the end, `si`, `sí`, `yes`, or `y` confirms deletion of the installed source files and the installer you ran; any other response keeps them. Only empty folders are removed: additional files, documentation, and project code are preserved.
 

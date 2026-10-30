@@ -7,7 +7,9 @@ function Install-SpecLite {
     $sourceRoot = Join-Path $projectRoot 'steps'
     $folders = @('speclite-explore', 'speclite-propose', 'speclite-apply', 'speclite-modify', 'speclite-shared')
     $files = @('speclite-explore/SKILL.md', 'speclite-propose/SKILL.md',
-        'speclite-apply/SKILL.md', 'speclite-modify/SKILL.md', 'speclite-shared/protocol.md', 'speclite-shared/LICENSE')
+        'speclite-apply/SKILL.md', 'speclite-modify/SKILL.md', 'speclite-shared/protocol.md',
+        'speclite-shared/specification.md', 'speclite-shared/revision.md',
+        'speclite-shared/closure.md', 'speclite-shared/LICENSE')
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {

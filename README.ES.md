@@ -18,6 +18,10 @@ Todo lo generado vive en `.liteSpec/`: cambios activos, notas temáticas en `doc
 
 La documentación permanece en el proyecto, en `.liteSpec/docs/`; compatibilidad con Obsidian no selecciona un vault externo. El cierre verifica el índice, los enlaces a temas afectados y su contenido vigente, e informa las rutas de documentación y archivo. Si falta documentación requerida, no se cierra.
 
+Cada `spec.md` registra una política de continuidad (`preserve`, `extend`, `replace` o `new`) y compatibilidad (`required`, `breaking-approved` o `not-applicable`), con una frase que delimita qué conservar, sustituir o migrar. Sirve para código, documentos y otros materiales; las etiquetas no autorizan eliminaciones por sí solas. Se guarda una sola vez, sin repetirla en cada paso.
+
+Antes de archivar se comprueban tareas, aceptación, integración, compatibilidad y documentación. También se exige autorización explícita de archivo, que puede estar concedida previamente; autorizar implementar no basta. Si falta algo, se informa y queda en `spec.md` como `pending-verification` o `pending-confirmation`, con el pendiente y la próxima acción para retomar en otra sesión.
+
 ## Instalar
 
 Copia la carpeta `steps/` completa y el instalador correspondiente en la **raíz del proyecto donde usarás SpecLite**, uno al lado del otro. No necesitas Python, Node ni descargas adicionales.
@@ -45,7 +49,7 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-Se copian las cuatro skills, el protocolo compartido y la licencia. Si ya existe alguna carpeta de SpecLite en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
+Se copian las cuatro skills, las reglas compartidas y la licencia. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios y `closure.md` al mantener documentación o cerrar. No se lee toda la carpeta por defecto. Si ya existe alguna carpeta de SpecLite en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
 
 Al terminar, `si`, `sí`, `yes` o `y` confirma borrar los archivos fuente instalados y el instalador ejecutado; cualquier otra respuesta los conserva. Solo se eliminan carpetas vacías: archivos adicionales, documentación y código del proyecto se mantienen.
 

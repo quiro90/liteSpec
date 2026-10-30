@@ -13,7 +13,9 @@ main() {
     source_root="$project_root/steps"
     local folders=(speclite-explore speclite-propose speclite-apply speclite-modify speclite-shared)
     local files=(speclite-explore/SKILL.md speclite-propose/SKILL.md
-        speclite-apply/SKILL.md speclite-modify/SKILL.md speclite-shared/protocol.md speclite-shared/LICENSE)
+        speclite-apply/SKILL.md speclite-modify/SKILL.md speclite-shared/protocol.md
+        speclite-shared/specification.md speclite-shared/revision.md
+        speclite-shared/closure.md speclite-shared/LICENSE)
 
     assert_local_path() {
         local current=$1

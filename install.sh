@@ -11,9 +11,9 @@ main() {
     project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
     script_path="$project_root/$(basename -- "${BASH_SOURCE[0]}")"
     source_root="$project_root/steps"
-    local folders=(speclite-explore speclite-propose speclite-apply speclite-shared)
+    local folders=(speclite-explore speclite-propose speclite-apply speclite-modify speclite-shared)
     local files=(speclite-explore/SKILL.md speclite-propose/SKILL.md
-        speclite-apply/SKILL.md speclite-shared/protocol.md speclite-shared/LICENSE)
+        speclite-apply/SKILL.md speclite-modify/SKILL.md speclite-shared/protocol.md speclite-shared/LICENSE)
 
     assert_local_path() {
         local current=$1

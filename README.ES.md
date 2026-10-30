@@ -14,6 +14,10 @@ La documentación generada sigue el mismo objetivo: mínima, organizada por tema
 
 Todo lo generado vive en `.liteSpec/`: cambios activos, notas temáticas en `docs/` con `index.md` compatible con Obsidian, e historial en `archived/`.
 
+**Modify (durante un cambio activo):** usa `speclite-modify` cuando cambien decisiones o archivos relevantes. Apply también atiende estas revisiones al detectarlas: actualiza solo las especificaciones y pasos afectados, reabre comprobaciones invalidadas y pregunta únicamente por decisiones pendientes. Conserva acuerdos válidos y progreso no afectado; un cambio archivado requiere otro nuevo enlazado.
+
+La documentación permanece en el proyecto, en `.liteSpec/docs/`; compatibilidad con Obsidian no selecciona un vault externo. El cierre verifica el índice, los enlaces a temas afectados y su contenido vigente, e informa las rutas de documentación y archivo. Si falta documentación requerida, no se cierra.
+
 ## Instalar
 
 Copia la carpeta `steps/` completa y el instalador correspondiente en la **raíz del proyecto donde usarás SpecLite**, uno al lado del otro. No necesitas Python, Node ni descargas adicionales.
@@ -41,7 +45,7 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-Se copian las tres skills, el protocolo compartido y la licencia. Si ya existe alguna carpeta de SpecLite en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
+Se copian las cuatro skills, el protocolo compartido y la licencia. Si ya existe alguna carpeta de SpecLite en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
 
 Al terminar, `si`, `sí`, `yes` o `y` confirma borrar los archivos fuente instalados y el instalador ejecutado; cualquier otra respuesta los conserva. Solo se eliminan carpetas vacías: archivos adicionales, documentación y código del proyecto se mantienen.
 

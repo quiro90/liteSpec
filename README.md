@@ -14,6 +14,10 @@ Generated documentation follows the same goal: minimal, organized by topic, and 
 
 All generated content lives in `.liteSpec/`: active changes, topic notes in `docs/` with an Obsidian-compatible `index.md`, and history in `archived/`.
 
+**Modify (during an active change):** use `speclite-modify` when decisions or relevant files change. Apply also handles these revisions as they arise: update only affected specs and steps, reopen invalidated checks, and ask only about unresolved decisions. Valid agreements and unaffected progress are preserved; archived changes require a new linked change.
+
+Documentation stays in the project at `.liteSpec/docs/`; Obsidian compatibility does not select an external vault. Closure verifies the index, affected topic links, and current content, then reports documentation and archive paths. Missing required documentation prevents closure.
+
 ## Install
 
 Copy the complete `steps/` folder and the appropriate installer into the **root of the project where you will use SpecLite**, side by side. No Python, Node, or additional downloads are required.
@@ -41,7 +45,7 @@ Choose the agent (not the model). Installation is local to the project:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-The three skills, shared protocol, and license are copied. If any SpecLite folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
+The four skills, shared protocol, and license are copied. If any SpecLite folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
 
 At the end, `si`, `sí`, `yes`, or `y` confirms deletion of the installed source files and the installer you ran; any other response keeps them. Only empty folders are removed: additional files, documentation, and project code are preserved.
 

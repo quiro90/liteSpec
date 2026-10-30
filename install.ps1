@@ -5,9 +5,9 @@ Set-StrictMode -Version Latest
 function Install-SpecLite {
     $projectRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
     $sourceRoot = Join-Path $projectRoot 'steps'
-    $folders = @('speclite-explore', 'speclite-propose', 'speclite-apply', 'speclite-shared')
+    $folders = @('speclite-explore', 'speclite-propose', 'speclite-apply', 'speclite-modify', 'speclite-shared')
     $files = @('speclite-explore/SKILL.md', 'speclite-propose/SKILL.md',
-        'speclite-apply/SKILL.md', 'speclite-shared/protocol.md', 'speclite-shared/LICENSE')
+        'speclite-apply/SKILL.md', 'speclite-modify/SKILL.md', 'speclite-shared/protocol.md', 'speclite-shared/LICENSE')
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {

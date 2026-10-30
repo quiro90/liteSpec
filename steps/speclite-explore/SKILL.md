@@ -9,4 +9,4 @@ Read the [shared rules](../speclite-shared/protocol.md).
 2. Explain outcome and scope; recommend an option when alternatives matter. Ask about unresolved scope, behavior, or acceptance; if clear, ask for confirmation of your concise understanding. Wait for an actual answer, even after a direct implementation request.
 3. Record the agreement in spec.md, plus only findings needed for specification or implementation. Mark Explore confirmed only when material questions are resolved; otherwise record what remains. Keep the change draft for Propose.
 
-Do not implement. Reuse recorded confirmation across sessions unless agreed scope or behavior changes; do not repeat valid confirmation.
+For revisions to an existing active change, follow shared incremental revision rules instead of restarting exploration. Do not implement. Reuse recorded confirmation across sessions unless agreed scope or behavior changes; do not repeat valid confirmation.

@@ -1,6 +1,6 @@
 # Incremental revision
 
-Use this procedure when the user changes an active change or relevant files differ from recorded findings; speclite-modify is its explicit entry point. Archived changes stay immutable: create a linked new change through Explore.
+Use this procedure when the user changes an active change or relevant files differ from recorded findings; litespec-modify is its explicit entry point. Archived changes stay immutable: create a linked new change through Explore.
 
 1. Read spec.md, the current or directly affected step, and only the requested delta or relevant changed source sections. Use recorded paths/symbols and targeted searches; do not reload all steps, docs, or project files. Expand only to resolve a concrete missing detail or a changed dependency contract.
 2. A clear user decision updates the agreement without repeat confirmation; a suggestion is not a decision, and an edited file is not proof of user intent. Resolve technical adjustments within agreed behavior and authorization. Ask only unresolved material questions about scope, behavior, acceptance, or conflicting edits; preserve user edits and pause affected work until answered. Continue independent authorized work.

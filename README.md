@@ -1,8 +1,8 @@
-# SpecLite
+# LiteSpec
 
 English | [Español](README.ES.md)
 
-Short, clear specifications for working with AI agents while keeping token usage low. SpecLite breaks work into small steps with enough context to execute and verify each one, without loading the entire project on every read.
+Short, clear specifications for working with AI agents while keeping token usage low. LiteSpec breaks work into small steps with enough context to execute and verify each one, without loading the entire project on every read.
 
 Generated documentation follows the same goal: minimal, organized by topic, and useful for continuing work without reconstructing conversations.
 
@@ -12,11 +12,11 @@ Generated documentation follows the same goal: minimal, organized by topic, and 
 2. **Propose:** prepare `spec.md` as an index and steps with context, tasks, and checks. A small change can use a single file.
 3. **Apply:** execute authorized steps, verify, update documentation, and archive.
 
-All generated content lives in `.liteSpec/`: active changes, topic notes in `docs/` with an Obsidian-compatible `index.md`, and history in `archived/`.
+All generated content lives in `.litespec/`: active changes, topic notes in `docs/` with an Obsidian-compatible `index.md`, and history in `archived/`.
 
-**Modify (during an active change):** use `speclite-modify` when decisions or relevant files change. Apply also handles these revisions as they arise: update only affected specs and steps, reopen invalidated checks, and ask only about unresolved decisions. Valid agreements and unaffected progress are preserved; archived changes require a new linked change.
+**Modify (during an active change):** use `litespec-modify` when decisions or relevant files change. Apply also handles these revisions as they arise: update only affected specs and steps, reopen invalidated checks, and ask only about unresolved decisions. Valid agreements and unaffected progress are preserved; archived changes require a new linked change.
 
-Documentation stays in the project at `.liteSpec/docs/`; Obsidian compatibility does not select an external vault. Closure verifies the index, affected topic links, and current content, then reports documentation and archive paths. Missing required documentation prevents closure.
+Documentation stays in the project at `.litespec/docs/`; Obsidian compatibility does not select an external vault. Closure verifies the index, affected topic links, and current content, then reports documentation and archive paths. Missing required documentation prevents closure.
 
 Each `spec.md` records continuity (`preserve`, `extend`, `replace`, or `new`) and compatibility (`required`, `breaking-approved`, or `not-applicable`), with a concrete boundary for what to retain, replace, or migrate. This applies to code, documents, and other artifacts; tags alone do not authorize deletion. Record the policy once, without repeating it in every step.
 
@@ -24,7 +24,7 @@ Before archiving, verify tasks, acceptance, integration, compatibility, and docu
 
 ## Install
 
-Copy the complete `steps/` folder and the appropriate installer into the **root of the project where you will use SpecLite**, side by side. No Python, Node, or additional downloads are required.
+Copy the complete `steps/` folder and the appropriate installer into the **root of the project where you will use LiteSpec**, side by side. No Python, Node, or additional downloads are required.
 
 **Windows — PowerShell:**
 
@@ -49,11 +49,15 @@ Choose the agent (not the model). Installation is local to the project:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-The four skills, shared rules, and license are copied. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. If any SpecLite folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
+The four skills, shared rules, and license are copied. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. If any LiteSpec folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
+
+The installer creates an empty `.litespec/` if missing and preserves its contents if present. It does not create `docs/`: the agent creates or updates it during work; documentation remains required for closure.
+
+When upgrading an older installation, replace the `speclite-*` folders with `litespec-*` to avoid duplicate skills. Preserve `.liteSpec/` data when adopting `.litespec/`; these are distinct paths on case-sensitive systems. The installer does not migrate older installations.
 
 At the end, `si`, `sí`, `yes`, or `y` confirms deletion of the installed source files and the installer you ran; any other response keeps them. Only empty folders are removed: additional files, documentation, and project code are preserved.
 
-Start a new agent session and ask: **“Use speclite-explore for [your change].”** Then continue with `speclite-propose` and `speclite-apply`; you can request a specific step or all pending steps. Confirming scope does not automatically authorize implementation.
+Start a new agent session and ask: **“Use litespec-explore for [your change].”** Then continue with `litespec-propose` and `litespec-apply`; you can request a specific step or all pending steps. Confirming scope does not automatically authorize implementation.
 
 ## License
 

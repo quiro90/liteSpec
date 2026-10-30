@@ -7,15 +7,15 @@ main() {
         printf '%s\n' 'No ejecutes el instalador mediante un enlace simbolico.' >&2
         return 1
     fi
-    local project_root script_path source_root choice relative destination answer file folder path
+    local project_root script_path source_root choice relative destination data_root answer file folder path
     project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
     script_path="$project_root/$(basename -- "${BASH_SOURCE[0]}")"
     source_root="$project_root/steps"
-    local folders=(speclite-explore speclite-propose speclite-apply speclite-modify speclite-shared)
-    local files=(speclite-explore/SKILL.md speclite-propose/SKILL.md
-        speclite-apply/SKILL.md speclite-modify/SKILL.md speclite-shared/protocol.md
-        speclite-shared/specification.md speclite-shared/revision.md
-        speclite-shared/closure.md speclite-shared/LICENSE)
+    local folders=(litespec-explore litespec-propose litespec-apply litespec-modify litespec-shared)
+    local files=(litespec-explore/SKILL.md litespec-propose/SKILL.md
+        litespec-apply/SKILL.md litespec-modify/SKILL.md litespec-shared/protocol.md
+        litespec-shared/specification.md litespec-shared/revision.md
+        litespec-shared/closure.md litespec-shared/LICENSE)
 
     assert_local_path() {
         local current=$1
@@ -39,7 +39,7 @@ main() {
             return 1
         fi
     done
-    printf 'SpecLite - proyecto: %s\n' "$project_root"
+    printf 'LiteSpec - proyecto: %s\n' "$project_root"
     printf '%s\n' '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI'
     read -r -p 'Agente [1-6]: ' choice || return 1
     case "$choice" in
@@ -60,12 +60,19 @@ main() {
             return 1
         fi
     done
+    data_root="$project_root/.litespec"
+    assert_local_path "$data_root"
+    if [[ -e "$data_root" && ! -d "$data_root" ]]; then
+        printf 'No es una carpeta: %s\n' "$data_root" >&2
+        return 1
+    fi
     mkdir -p -- "$destination"
     for folder in "${folders[@]}"; do mkdir -- "$destination/$folder"; done
     for file in "${files[@]}"; do
         cp -- "$source_root/$file" "$destination/$file"
         cmp -s -- "$source_root/$file" "$destination/$file"
     done
+    mkdir -p -- "$data_root"
     printf 'Instalado y verificado en %s. Abre una nueva sesion del agente.\n' "$destination"
     read -r -p 'Borrar fuentes de steps/ e instalador ejecutado? [si/yes/y; otra respuesta conserva]: ' answer || answer=''
     case "$answer" in

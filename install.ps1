@@ -2,14 +2,14 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-function Install-SpecLite {
+function Install-LiteSpec {
     $projectRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
     $sourceRoot = Join-Path $projectRoot 'steps'
-    $folders = @('speclite-explore', 'speclite-propose', 'speclite-apply', 'speclite-modify', 'speclite-shared')
-    $files = @('speclite-explore/SKILL.md', 'speclite-propose/SKILL.md',
-        'speclite-apply/SKILL.md', 'speclite-modify/SKILL.md', 'speclite-shared/protocol.md',
-        'speclite-shared/specification.md', 'speclite-shared/revision.md',
-        'speclite-shared/closure.md', 'speclite-shared/LICENSE')
+    $folders = @('litespec-explore', 'litespec-propose', 'litespec-apply', 'litespec-modify', 'litespec-shared')
+    $files = @('litespec-explore/SKILL.md', 'litespec-propose/SKILL.md',
+        'litespec-apply/SKILL.md', 'litespec-modify/SKILL.md', 'litespec-shared/protocol.md',
+        'litespec-shared/specification.md', 'litespec-shared/revision.md',
+        'litespec-shared/closure.md', 'litespec-shared/LICENSE')
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {
@@ -35,7 +35,7 @@ function Install-SpecLite {
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Falta: $source" }
     }
 
-    Write-Host "SpecLite - proyecto: $projectRoot"
+    Write-Host "LiteSpec - proyecto: $projectRoot"
     Write-Host '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI'
     [string]$choice = Read-Host 'Agente [1-6]'
     $relative = switch (([string]$choice).Trim()) {
@@ -55,6 +55,12 @@ function Install-SpecLite {
         if (Test-Path -LiteralPath $target) { throw "Ya existe $target. No se sobrescribe." }
     }
 
+    $dataRoot = Join-Path $projectRoot '.litespec'
+    Assert-LocalPath $dataRoot
+    if ((Test-Path -LiteralPath $dataRoot) -and -not (Test-Path -LiteralPath $dataRoot -PathType Container)) {
+        throw "No es una carpeta: $dataRoot"
+    }
+
     foreach ($folder in $folders) {
         [System.IO.Directory]::CreateDirectory((Join-Path $destination $folder)) | Out-Null
     }
@@ -66,6 +72,7 @@ function Install-SpecLite {
             throw "Fallo la verificacion: $target. Se conservan los originales."
         }
     }
+    [System.IO.Directory]::CreateDirectory($dataRoot) | Out-Null
     Write-Host "Instalado y verificado en $destination. Abre una nueva sesion del agente."
     [string]$answer = Read-Host 'Borrar fuentes de steps/ e instalador ejecutado? [si/yes/y; otra respuesta conserva]'
     if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim() -notmatch '^(si|s\u00ed|yes|y)$') { return }
@@ -95,7 +102,7 @@ function Install-SpecLite {
     Write-Host 'Limpieza terminada. Se conservaron los archivos adicionales, si los habia.'
 }
 
-try { Install-SpecLite } catch {
+try { Install-LiteSpec } catch {
     Write-Error "Instalacion o limpieza incompleta: $($_.Exception.Message)" -ErrorAction Continue
     exit 1
 }

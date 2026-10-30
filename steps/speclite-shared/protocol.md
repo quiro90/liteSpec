@@ -1,6 +1,6 @@
 # Shared rules
 
-Read each rules file once per context; reread if changed or unavailable. Load only references required by the current skill and situation, not this entire folder. Keep this folder beside the four skills. Use available tools without requiring a provider.
+Read each rules file once per context; reread if changed or unavailable. Load only references required by the current skill and situation, not this entire folder. Use available tools without requiring a provider.
 
 - **Language:** use the user's language for communication and new specs; preserve existing documents' language. Keep paths, skill names, state values, and policy tags unchanged.
 - **Record:** resume the same change in `.liteSpec/<spec-name>/` from the project root; avoid collisions and reserved folders `docs`, `archived`, and `steps`. Record enough to continue without the conversation.

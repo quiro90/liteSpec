@@ -15,7 +15,7 @@ main() {
     local files=(litespec-explore/SKILL.md litespec-propose/SKILL.md
         litespec-apply/SKILL.md litespec-modify/SKILL.md litespec-shared/protocol.md
         litespec-shared/specification.md litespec-shared/revision.md
-        litespec-shared/closure.md litespec-shared/LICENSE)
+        litespec-shared/closure.md)
 
     assert_local_path() {
         local current=$1
@@ -55,8 +55,16 @@ main() {
     assert_local_path "$destination"
     for folder in "${folders[@]}"; do
         assert_local_path "$destination/$folder"
-        if [[ -e "$destination/$folder" ]]; then
-            printf 'Ya existe %s. No se sobrescribe.\n' "$destination/$folder" >&2
+        if [[ -e "$destination/$folder" && ! -d "$destination/$folder" ]]; then
+            printf 'No es una carpeta: %s\n' "$destination/$folder" >&2
+            return 1
+        fi
+    done
+    # Preflight every known file before replacing anything; preserve all extras.
+    for file in "${files[@]}"; do
+        assert_local_path "$destination/$file"
+        if [[ -e "$destination/$file" && ! -f "$destination/$file" ]]; then
+            printf 'No es un archivo: %s\n' "$destination/$file" >&2
             return 1
         fi
     done
@@ -67,8 +75,10 @@ main() {
         return 1
     fi
     mkdir -p -- "$destination"
-    for folder in "${folders[@]}"; do mkdir -- "$destination/$folder"; done
+    for folder in "${folders[@]}"; do mkdir -p -- "$destination/$folder"; done
     for file in "${files[@]}"; do
+        assert_local_path "$destination/$file"
+        if [[ -f "$destination/$file" ]]; then rm -- "$destination/$file"; fi
         cp -- "$source_root/$file" "$destination/$file"
         cmp -s -- "$source_root/$file" "$destination/$file"
     done

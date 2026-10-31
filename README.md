@@ -49,7 +49,7 @@ Choose the agent (not the model). Installation is local to the project:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-The four skills, shared rules, and license are copied. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. If any LiteSpec folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
+The four skills and shared rules are copied. LICENSE stays at the repository root. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. Reinstallation replaces only the eight listed package files in the five LiteSpec folders; extra files and other skills are preserved. Destination links or file/directory conflicts stop installation before replacement.
 
 The installer creates an empty `.litespec/` if missing and preserves its contents if present. The agent creates `specs/`, `docs/`, and `archived/` as needed during work; documentation remains required for closure.
 

@@ -9,7 +9,7 @@ function Install-LiteSpec {
     $files = @('litespec-explore/SKILL.md', 'litespec-propose/SKILL.md',
         'litespec-apply/SKILL.md', 'litespec-modify/SKILL.md', 'litespec-shared/protocol.md',
         'litespec-shared/specification.md', 'litespec-shared/revision.md',
-        'litespec-shared/closure.md', 'litespec-shared/LICENSE')
+        'litespec-shared/closure.md')
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {
@@ -52,7 +52,17 @@ function Install-LiteSpec {
     foreach ($folder in $folders) {
         $target = Join-Path $destination $folder
         Assert-LocalPath $target
-        if (Test-Path -LiteralPath $target) { throw "Ya existe $target. No se sobrescribe." }
+        if ((Test-Path -LiteralPath $target) -and -not (Test-Path -LiteralPath $target -PathType Container)) {
+            throw "No es una carpeta: $target"
+        }
+    }
+    # Preflight every known file before replacing anything; preserve all extras.
+    foreach ($file in $files) {
+        $target = Join-Path $destination $file
+        Assert-LocalPath $target
+        if ((Test-Path -LiteralPath $target) -and -not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "No es un archivo: $target"
+        }
     }
 
     $dataRoot = Join-Path $projectRoot '.litespec'
@@ -67,6 +77,8 @@ function Install-LiteSpec {
     foreach ($file in $files) {
         $source = Join-Path $sourceRoot $file
         $target = Join-Path $destination $file
+        Assert-LocalPath $target
+        if (Test-Path -LiteralPath $target -PathType Leaf) { Remove-Item -LiteralPath $target }
         [System.IO.File]::Copy($source, $target, $false)
         if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $target).Hash) {
             throw "Fallo la verificacion: $target. Se conservan los originales."

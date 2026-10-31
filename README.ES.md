@@ -49,7 +49,7 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
 
-Se copian las cuatro skills, las reglas compartidas y la licencia. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios y `closure.md` al mantener documentación o cerrar. No se lee toda la carpeta por defecto. Si ya existe alguna carpeta de LiteSpec en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
+Se copian las cuatro skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios y `closure.md` al mantener documentación o cerrar. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los ocho archivos enumerados del paquete en las cinco carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; la documentación sigue siendo obligatoria para cerrar un cambio.
 

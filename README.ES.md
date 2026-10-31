@@ -12,7 +12,7 @@ La documentación generada sigue el mismo objetivo: mínima, organizada por tema
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
 3. **Apply:** ejecutar los pasos autorizados, verificar, actualizar documentación y archivar.
 
-Todo lo generado vive en `.litespec/`: cambios activos, notas temáticas en `docs/` con `index.md` compatible con Obsidian, e historial en `archived/`.
+Todo lo generado vive en `.litespec/`: cambios activos en `specs/<spec-name>/` (spec.md y pasos), notas temáticas en `docs/` con `index.md` compatible con Obsidian, e historial en `archived/`.
 
 **Modify (durante un cambio activo):** usa `litespec-modify` cuando cambien decisiones o archivos relevantes. Apply también atiende estas revisiones al detectarlas: actualiza solo las especificaciones y pasos afectados, reabre comprobaciones invalidadas y pregunta únicamente por decisiones pendientes. Conserva acuerdos válidos y progreso no afectado; un cambio archivado requiere otro nuevo enlazado.
 
@@ -51,7 +51,7 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 
 Se copian las cuatro skills, las reglas compartidas y la licencia. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios y `closure.md` al mantener documentación o cerrar. No se lee toda la carpeta por defecto. Si ya existe alguna carpeta de LiteSpec en el destino, se cancela sin sobrescribir: revísala antes de reinstalar. Las demás skills se conservan.
 
-El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. No crea `docs/`: el agente la crea o actualiza al trabajar; sigue siendo obligatoria para cerrar un cambio.
+El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; la documentación sigue siendo obligatoria para cerrar un cambio.
 
 Si actualizas una instalación anterior, reemplaza las carpetas `speclite-*` por las nuevas `litespec-*` para evitar skills duplicadas. Conserva los datos de `.liteSpec/` al adoptar el nombre `.litespec/`; en sistemas sensibles a mayúsculas son rutas distintas. El instalador no migra instalaciones anteriores.
 

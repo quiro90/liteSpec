@@ -12,7 +12,7 @@ Generated documentation follows the same goal: minimal, organized by topic, and 
 2. **Propose:** prepare `spec.md` as an index and steps with context, tasks, and checks. A small change can use a single file.
 3. **Apply:** execute authorized steps, verify, update documentation, and archive.
 
-All generated content lives in `.litespec/`: active changes, topic notes in `docs/` with an Obsidian-compatible `index.md`, and history in `archived/`.
+All generated content lives in `.litespec/`: active changes in `specs/<spec-name>/` (spec.md and steps), topic notes in `docs/` with an Obsidian-compatible `index.md`, and history in `archived/`.
 
 **Modify (during an active change):** use `litespec-modify` when decisions or relevant files change. Apply also handles these revisions as they arise: update only affected specs and steps, reopen invalidated checks, and ask only about unresolved decisions. Valid agreements and unaffected progress are preserved; archived changes require a new linked change.
 
@@ -51,7 +51,7 @@ Choose the agent (not the model). Installation is local to the project:
 
 The four skills, shared rules, and license are copied. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, and `closure.md` when maintaining documentation or closing. Do not load the entire folder by default. If any LiteSpec folder already exists at the destination, installation stops without overwriting it: review it before reinstalling. Other skills are preserved.
 
-The installer creates an empty `.litespec/` if missing and preserves its contents if present. It does not create `docs/`: the agent creates or updates it during work; documentation remains required for closure.
+The installer creates an empty `.litespec/` if missing and preserves its contents if present. The agent creates `specs/`, `docs/`, and `archived/` as needed during work; documentation remains required for closure.
 
 When upgrading an older installation, replace the `speclite-*` folders with `litespec-*` to avoid duplicate skills. Preserve `.liteSpec/` data when adopting `.litespec/`; these are distinct paths on case-sensitive systems. The installer does not migrate older installations.
 

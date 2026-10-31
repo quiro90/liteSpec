@@ -3,7 +3,7 @@
 Read each rules file once per context; reread if changed or unavailable. Load only references required by the current skill and situation, not this entire folder. Use available tools without requiring a provider.
 
 - **Language:** use the user's language for communication and new specs; preserve existing documents' language. Keep paths, skill names, state values, and policy tags unchanged.
-- **Record:** resume the same change in `.litespec/<spec-name>/` from the project root; avoid collisions and reserved folders `docs`, `archived`, and `steps`. Record enough to continue without the conversation.
+- **Record:** create or resume each active change in `.litespec/specs/<spec-name>/` from the project root; keep spec.md, steps, and change-specific notes inside it. Create directories as needed; avoid collisions. Record enough to continue without the conversation.
 - **Agreement:** faithfully summarize Explore's actual question, user answer, and agreed scope in spec.md. Record implementation and archive authorization with their scopes separately; scope confirmation and ready status authorize neither. Preserve valid agreements; never invent them.
 - **States:** change = draft / ready / implementing / done; draft has material unknowns, ready is specified, implementing includes interrupted work, done requires closure. Step = pending / active / blocked / done, stored only in the index.
 - **Freshness:** reuse findings; minimally check relevant sources before relying on them. If changed or uncertain, reread affected parts and update affected specs/checks, not the entire analysis.

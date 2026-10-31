@@ -40,8 +40,8 @@ main() {
         fi
     done
     printf 'LiteSpec - proyecto: %s\n' "$project_root"
-    printf '%s\n' '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI'
-    read -r -p 'Agente [1-6]: ' choice || return 1
+    printf '%s\n' '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed'
+    read -r -p 'Agente [1-12]: ' choice || return 1
     case "$choice" in
         1) relative=.agents/skills ;;
         2) relative=.claude/skills ;;
@@ -49,6 +49,12 @@ main() {
         4) relative=.cursor/skills ;;
         5) relative=.opencode/skills ;;
         6) relative=.qoder/skills ;;
+        7) relative=.gemini/skills ;;
+        8) relative=.qwen/skills ;;
+        9) relative=.cline/skills ;;
+        10) relative=.devin/skills ;;
+        11) relative=.ade/skills ;;
+        12) relative=.agents/skills ;;
         *) printf '%s\n' 'Seleccion invalida; no se instalo nada.' >&2; return 1 ;;
     esac
     destination="$project_root/$relative"

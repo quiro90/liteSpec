@@ -48,6 +48,14 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 | [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` |
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
+| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` |
+| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` |
+| [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` |
+| [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` |
+| [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` |
+| [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` |
+
+Zed Agent requiere un proyecto de confianza y comparte este destino con Codex. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
 
 Se copian las cuatro skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios y `closure.md` al mantener documentación o cerrar. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los ocho archivos enumerados del paquete en las cinco carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
 

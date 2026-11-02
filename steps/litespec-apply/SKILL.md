@@ -1,12 +1,12 @@
 ---
 name: litespec-apply
-description: Execute selected or all LiteSpec steps, verify outcomes, and archive completed changes.
+description: Execute authorized LiteSpec steps, verify outcomes, or resume only documentation and closure.
 ---
 
 Read the [shared rules](../litespec-shared/protocol.md).
 
-1. Read spec.md, including continuity/compatibility constraints. If the policy is missing or unclear, read the [specification contract](../litespec-shared/specification.md) and resolve material gaps. Require valid Explore confirmation, ready (or implementing) state, and authorization covering the work. Complete missing stages first; ask for authorization only if missing or insufficient.
-2. Honor the requested steps; otherwise continue authorized pending work in dependency order. A step starts only after prerequisites are done; execute prerequisites if authorized, otherwise report the blocker. Load only the current step and necessary sources; check actual progress and freshness.
-3. Mark implementing and the step active; execute its tasks. Resolve technical details within scope. For changed user decisions or relevant source discrepancies, read and follow [incremental revision](../litespec-shared/revision.md) before continuing affected work; preserve independent authorized progress.
-4. When maintaining living docs, read [documentation and closure](../litespec-shared/closure.md). Update checkboxes and record actual verification in the step; mark it done only when its acceptance, required checks and documentation pass. If unfinished, record remaining work/blocker and next action; update index status.
-5. After all steps finish, read and execute [closure gates](../litespec-shared/closure.md). Partial execution never closes the change.
+1. Read spec.md, including continuity/compatibility constraints. For a closure-only request, go directly to [closure](../litespec-shared/closure.md): update required docs within authorization, verify, and report unfinished implementation without executing it. Otherwise require valid Explore confirmation, ready (or implementing) state, and authorization covering the work. Complete missing stages; resolve missing policy through the [specification contract](../litespec-shared/specification.md).
+2. Honor requested steps; otherwise continue authorized pending work in dependency order. Start only after prerequisites are done; execute them if authorized, otherwise report the blocker. Load only the current step and necessary sources; check progress and freshness.
+3. Mark implementing and the step active; execute its tasks. Resolve technical details within scope. For changed decisions or source discrepancies, follow [incremental revision](../litespec-shared/revision.md); preserve independent authorized progress.
+4. Update required docs using [documentation rules](../litespec-shared/closure.md), then follow [verification](../litespec-shared/verification.md) for the step.
+5. After all steps finish, execute [closure](../litespec-shared/closure.md). Partial execution never closes the change.

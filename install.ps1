@@ -5,11 +5,12 @@ Set-StrictMode -Version Latest
 function Install-LiteSpec {
     $projectRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
     $sourceRoot = Join-Path $projectRoot 'steps'
-    $folders = @('litespec-explore', 'litespec-propose', 'litespec-apply', 'litespec-modify', 'litespec-shared')
+    $folders = @('litespec-explore', 'litespec-propose', 'litespec-apply', 'litespec-modify', 'litespec-verify', 'litespec-shared')
     $files = @('litespec-explore/SKILL.md', 'litespec-propose/SKILL.md',
-        'litespec-apply/SKILL.md', 'litespec-modify/SKILL.md', 'litespec-shared/protocol.md',
+        'litespec-apply/SKILL.md', 'litespec-modify/SKILL.md', 'litespec-verify/SKILL.md',
+        'litespec-shared/protocol.md',
         'litespec-shared/specification.md', 'litespec-shared/revision.md',
-        'litespec-shared/closure.md')
+        'litespec-shared/closure.md', 'litespec-shared/verification.md')
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {

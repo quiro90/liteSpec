@@ -1,14 +1,14 @@
 # Specification contract
 
-**spec.md:** goal and scope limits; shared decisions/constraints and continuity policy; Explore agreement and authorizations; observable overall acceptance; change state; step index. Each index row has a linked step, prerequisite step IDs (or none), and status. Include overall verification results and unresolved cross-step issues only when relevant.
+**spec.md:** goal/scope limits; shared decisions/constraints and continuity policy; Explore agreement and authorizations; observable overall acceptance; change state; step index. Each row links a step and lists prerequisite IDs (or none) and status. Keep global verification and cross-step blockers/next actions here; local continuation stays in its step.
 
-**Continuity policy (every spec):** record `preserve` (retain existing behavior/content), `extend` (add while retaining it), `replace` (supersede specified material), or `new` (no predecessor), followed by the concrete boundary. Add compatibility `required`, `breaking-approved`, or `not-applicable`, naming interfaces, formats, requirements, or consumers that must remain valid. Name removals/migrations only when needed. Use one or two lines in spec.md; steps add only local exceptions. These apply to code, documents, scripts, and other artifacts. A tag alone never authorizes deletion or breakage. Resolve material uncertainty before affected execution; do not invent approval or preservation/removal requirements. Existing specs missing this policy need only a targeted clarification, not full re-exploration.
+**Continuity (every spec):** use one or two lines naming `preserve` (retain), `extend` (add while retaining), `replace` (supersede), or `new` (no predecessor), with concrete boundaries. Add compatibility `required`, `breaking-approved`, or `not-applicable`, identifying interfaces, formats, requirements, or consumers to preserve. Name removals/migrations when needed; steps add only local exceptions. This covers code, documents, and other artifacts. Tags never authorize deletion or breakage. Resolve material uncertainty before affected work; do not invent approval or preservation/removal requirements. Missing policies need targeted clarification, not renewed exploration.
 
-**NN-short-name.md:** one independently verifiable outcome comprising related tasks, not one file per checkbox or source file. Include:
+**NN-short-name.md:** one independently verifiable outcome, not one file per task or source. Include:
 - Outcome.
-- Necessary context: paths/symbols, local constraints/decisions and their non-obvious reasons. Label assumptions. Include the minimum interface expected from prerequisites so execution does not require reading their specs.
-- Concrete checkbox tasks, including affected documentation when needed.
-- Observable acceptance and how to check it.
-- On execution: actual checks/results; if unfinished, remaining work/blocker and next action. Replace stale continuation notes.
+- Necessary paths/symbols, local constraints/decisions and non-obvious reasons; label assumptions. State prerequisite interfaces sufficient to avoid reading their specs.
+- Checkbox tasks, including affected docs.
+- Observable acceptance and methods; distinguish required checks, optional tests, and user-run checks.
+- Actual checks/results; remaining work/blocker and next action. Replace stale continuation notes.
 
-Shared facts belong in spec.md; local details belong in their step. For a small single-step change, inline the step in spec.md and omit the index and extra file. During Explore, keep useful findings in spec.md; Propose moves local findings into steps. Add linked notes only for substantial, necessary detail; state when to read them and do not duplicate it.
+Shared facts belong in spec.md; local details in steps. Inline small single-step changes in spec.md without an index or extra file. Explore records useful findings there; Propose moves local findings into steps. Add notes only for substantial necessary detail, with a reading trigger and no duplication.

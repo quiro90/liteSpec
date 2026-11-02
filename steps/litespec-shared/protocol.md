@@ -1,15 +1,15 @@
 # Shared rules
 
-Read each rules file once per context; reread if changed or unavailable. Load only references required by the current skill and situation, not this entire folder. Use available tools without requiring a provider.
+Read rules once per context; reread only if changed or unavailable. Load only required references. Use available tools; no provider is required.
 
-- **Language:** use the user's language for communication and new specs; preserve existing documents' language. Keep paths, skill names, state values, and policy tags unchanged.
-- **Record:** create or resume each active change in `.litespec/specs/<spec-name>/` from the project root; keep spec.md, steps, and change-specific notes inside it. Create directories as needed; avoid collisions. Record enough to continue without the conversation.
-- **Agreement:** faithfully summarize Explore's actual question, user answer, and agreed scope in spec.md. Record implementation and archive authorization with their scopes separately; scope confirmation and ready status authorize neither. Preserve valid agreements; never invent them.
-- **States:** change = draft / ready / implementing / done; draft has material unknowns, ready is specified, implementing includes interrupted work, done requires closure. Step = pending / active / blocked / done, stored only in the index.
-- **Freshness:** reuse findings; minimally check relevant sources before relying on them. If changed or uncertain, reread affected parts and update affected specs/checks, not the entire analysis.
+- **Language:** use the user's language for communication and new specs; preserve existing document languages, paths, skill names, states, and policy tags.
+- **Record:** keep each change's spec.md, steps, and notes in `.litespec/specs/<spec-name>/` relative to the project root. Create directories as needed without collisions. Preserve enough context to resume without conversation history.
+- **Agreement:** record the explicit request/answers and agreed scope in spec.md. Clear requests settle Explore; ask only unresolved material questions. Suggestions and source edits are not agreements. Record implementation and archive authorizations separately with their scopes; scope confirmation and ready status authorize neither. Reuse valid agreements; never invent them.
+- **States:** change = draft (material unknowns) / ready (specified) / implementing (including interrupted work) / done (closed). Step = pending / active / blocked / done, stored only in the index or beside an inline step.
+- **Freshness:** reuse findings after targeted source checks. Reread changed or uncertain parts; use incremental revision for discrepancies.
 
 ## Minimal context
 
-Keep only information that guides execution, prevents rediscovery, or verifies outcomes. Use concise bullets and concrete paths/symbols; omit empty sections, repeated context, transcripts, large code excerpts, and work logs. Prefer one-line fields and linked references over repeated explanations or extra files; do not copy this protocol into generated artifacts. Brevity must not hide constraints or unresolved decisions.
+Keep execution guidance, constraints, unresolved decisions, rationale preventing rediscovery, and evidence. Prefer concise fields, concrete paths/symbols, and references. Omit empty sections, duplication, transcripts, large excerpts, and work logs; never copy these rules into specs.
 
-**Read selectively:** read spec.md plus the selected step and relevant source material. Load notes or other steps only to resolve a specific missing detail. For all steps, load each when reached; never preload every step by default.
+Read spec.md, the current step, and necessary sources. Load other notes/steps only for a concrete gap; process steps when reached, never preload them.

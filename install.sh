@@ -11,12 +11,12 @@ main() {
     project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
     script_path="$project_root/$(basename -- "${BASH_SOURCE[0]}")"
     source_root="$project_root/steps"
-    local folders=(litespec-explore litespec-propose litespec-apply litespec-modify litespec-verify litespec-shared)
+    local folders=(litespec-explore litespec-propose litespec-apply litespec-modify litespec-verify litespec-archive litespec-shared)
     local files=(litespec-explore/SKILL.md litespec-propose/SKILL.md
-        litespec-apply/SKILL.md litespec-modify/SKILL.md litespec-verify/SKILL.md
+        litespec-apply/SKILL.md litespec-modify/SKILL.md litespec-verify/SKILL.md litespec-archive/SKILL.md
         litespec-shared/protocol.md
         litespec-shared/specification.md litespec-shared/revision.md
-        litespec-shared/closure.md litespec-shared/verification.md)
+        litespec-shared/documentation.md litespec-shared/closure.md litespec-shared/verification.md)
 
     assert_local_path() {
         local current=$1

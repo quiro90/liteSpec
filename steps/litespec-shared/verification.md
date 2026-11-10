@@ -1,6 +1,6 @@
 # Verification
 
-Check selected tasks/steps against acceptance, required docs, and prerequisite contracts. Whole-change checks also inspect every step's evidence, overall acceptance, integration, and continuity/compatibility. Load steps as needed; group related checks.
+Check selected tasks/steps against acceptance, explicit documentation deliverables, and prerequisite contracts. Living-doc consolidation is a separate Archive gate. Whole-change checks also inspect every step's evidence, overall acceptance, integration, and continuity/compatibility. Load steps as needed; group related checks.
 
 **Types:** code/artifact quality and consistency review does not automatically request automated or manual tests. Run authorized required tests. Offer useful optional tests once: whether to run them, and by agent or user; reuse decisions. For user-run checks, provide brief steps/expected results and request outcomes; label them user-reported, not agent-verified.
 

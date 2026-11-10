@@ -7,7 +7,7 @@
 **NN-short-name.md:** one independently verifiable outcome, not one file per task or source. Include:
 - Outcome.
 - Necessary paths/symbols, local constraints/decisions and non-obvious reasons; label assumptions. State prerequisite interfaces sufficient to avoid reading their specs.
-- Checkbox tasks, including affected docs.
+- Checkbox tasks, including explicit documentation deliverables; living-doc consolidation belongs to Archive.
 - Observable acceptance and methods; distinguish required checks, optional tests, and user-run checks.
 - Actual checks/results; remaining work/blocker and next action. Replace stale continuation notes.
 

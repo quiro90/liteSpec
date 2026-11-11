@@ -37,7 +37,7 @@ function Install-LiteSpec {
     }
 
     Write-Host "LiteSpec - proyecto: $projectRoot"
-    Write-Host '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed'
+    Write-Host '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed  13) Minimax Code'
     [string]$choice = Read-Host 'Agente [1-12]'
     $relative = switch (([string]$choice).Trim()) {
         '1' { '.agents/skills' }
@@ -52,6 +52,7 @@ function Install-LiteSpec {
         '10' { '.devin/skills' }
         '11' { '.ade/skills' }
         '12' { '.agents/skills' }
+        '13' { '.minimax/skills'}
         default { throw 'Seleccion invalida; no se instalo nada.' }
     }
     $destination = Join-Path $projectRoot $relative

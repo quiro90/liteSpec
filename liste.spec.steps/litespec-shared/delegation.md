@@ -2,7 +2,7 @@
 
 Optional automation using models assigned to specific responsibilities. It does not guarantee token or quota savings; the parent still consumes resources and coordination can increase usage. Native support, loaded configuration, account access and higher-priority instructions determine availability.
 
-When `delegation-active.md` is present, use only its adapter and named agents. Delegate substantial bounded work when useful; use direct tools for trivial tasks. Search returns evidence, plan returns analysis/proposals, implement executes authorized work and verifies it. Roles are not LiteSpec stages. The parent owns agreements, spec status, integration and Archive; Apply still verifies its work.
+Only the matching client may use `delegation-active.md` and its named agents; Zed sharing Codex skill paths does not activate Codex delegation. Delegate substantial bounded work when useful; use direct tools for trivial tasks. Search returns evidence, plan returns analysis/proposals, implement executes authorized work and verifies it. Roles are not LiteSpec stages. The parent owns agreements, spec status, integration and Archive; Apply still verifies its work.
 
 Send only objective, necessary paths/evidence, authorized scope, constraints, checks and expected output. Prefer a fresh context over forwarding the conversation. Run at most one worker at a time; no recursive delegation or concurrent writers. Workers must read applicable AGENTS.md and the shared protocol, but must not delegate again. Search/plan must not edit. Instructions are not a separate read-only sandbox in Codex. In Claude, restrict search/plan to Read/Grep/Glob.
 
@@ -12,7 +12,7 @@ If delegation is unavailable, restricted, unloaded, or fails because of model/ef
 
 ## Reconfigure or disable after deleting the installer
 
-Edit the role files' `model` and effort fields directly. Codex uses `model_reasoning_effort` and Claude uses `effort`. Omitted values follow each client's defaults. When changing models, choose a compatible effort if needed. Claude also supports `model: inherit`.
+Edit the role files' `model` and effort fields directly. Codex uses `model_reasoning_effort` and Claude uses `effort`. Omitted values follow each client's defaults; models are assigned per role, not selected automatically by task difficulty. When changing models, choose a compatible effort if needed. Claude also supports `model: inherit`.
 
 To change modes, copy a fresh package if needed and rerun the installer for the same agent. **Normal** moves LiteSpec's role files and activation marker out of the active directories. **Auto model** restores them, including custom models and effort settings. If an active file and its saved counterpart both exist, resolve the duplicate before retrying.
 

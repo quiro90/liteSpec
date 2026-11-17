@@ -18,10 +18,10 @@ function fixture(name) {
   fs.copyFileSync(path.join(source, path.basename(script)), script);
   return {root, script};
 }
-function run(f, input, success = true) {
+function run(f, input, success = true, overrides = {}) {
   const command = engine === 'bash' ? 'C:/Program Files/Git/bin/bash.exe' : 'powershell.exe';
   const args = engine === 'bash' ? [f.script.replaceAll('\\','/')] : ['-NoProfile','-ExecutionPolicy','Bypass','-File',f.script];
-  const env = {...process.env};
+  const env = {...process.env, ...overrides};
   // The desktop shell may export PowerShell 7's module path to Windows PS 5.1.
   if (engine === 'powershell') env.PSModulePath = `${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0\\Modules`;
   const r = spawnSync(command, args, {input:input+'\n', encoding:'utf8', timeout:30000, env});
@@ -29,10 +29,97 @@ function run(f, input, success = true) {
   return r.stdout;
 }
 function read(f,p) {return fs.readFileSync(path.join(f.root,p),'utf8');}
-for (const agent of ['1','2','3','12','13']) {
+// Edge checks can run separately after the full suite: third argument gitignore-edge.
+{
+  const f = fixture('ignore-single-crlf');
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'# Windows\r\n');
+  run(f, '3\nno\ni');
+  assert(!read(f,'.gitignore').replaceAll('\r\n','').includes('\n'), 'preserve CRLF for appended rules');
+}
+{
+  const f = fixture('ignore-no-repository');
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'/.agents/\n/liste.spec.steps/\n');
+  const overrides = {GIT_DIR:path.join(f.root,'missing-repository')};
+  run(f, '1\n1\nno\ns', true, overrides);
+  const expected = '/.agents/\n/liste.spec.steps/\n/'+path.basename(f.script)+'\n';
+  assert.equal(read(f,'.gitignore'), expected);
+  run(f, '1\n1\nno\ns', true, overrides);
+  assert.equal(read(f,'.gitignore'), expected, 'fallback must not duplicate literal or parent rules');
+}
+if (process.argv[3] === 'gitignore-edge') { console.log('PASS '+engine+': CRLF and no-repository fallback'); process.exit(0); }
+// Optional .gitignore update is the final step, including after source cleanup.
+{
+  const f = fixture('ignore-both');
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'# reglas propias\r\nnode_modules/');
+  run(f, '1\n1\nno\nyes');
+  const text = read(f,'.gitignore');
+  assert(text.startsWith('# reglas propias\r\nnode_modules/'));
+  assert(text.includes('/'+path.basename(f.script)));
+  assert(text.includes('/liste.spec.steps/'));
+  for (const name of ['explore','propose','apply','modify','verify','archive','shared']) assert(text.includes('/.agents/skills/litespec-'+name+'/'));
+  assert(!text.split(/\r?\n/).includes('/.agents/skills/'));
+  run(f, '1\n1\nno\ny');
+  assert.equal(read(f,'.gitignore'), text, 'reinstall must not duplicate ignore rules');
+}
+for (const answer of ['i','INS','no','']) {
+  const f = fixture('ignore-answer-'+(answer || 'empty'));
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'# keep\n');
+  run(f, '3\nno\n'+answer);
+  const text = read(f,'.gitignore');
+  if (['i','INS'].includes(answer)) {
+    assert(text.includes('/'+path.basename(f.script)));
+    assert(text.includes('/liste.spec.steps/'));
+    assert(!text.includes('.github'));
+  } else assert.equal(text, '# keep\n');
+}
+{
+  const f = fixture('ignore-cleanup');
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'');
+  run(f, '2\n1\nyes\ns');
+  assert(!fs.existsSync(f.script));
+  assert(read(f,'.gitignore').includes('/.claude/skills/litespec-apply/'));
+}
+{
+  const f = fixture('ignore-covered');
+  fs.writeFileSync(path.join(f.root,'.gitignore'),'/.agents/\n/liste.spec.steps/\n/'+path.basename(f.script)+'\n');
+  const original = read(f,'.gitignore');
+  run(f, '1\n1\nno\nsi');
+  assert.equal(read(f,'.gitignore'), original, 'existing parent exclusion already covers skills');
+}
+// Shared Codex/Zed skills must scope routing to the current client.
+{
+  const f = fixture('codex-zed');
+  run(f, '1\n2\n\n\n\n\n\n\nno');
+  const marker = '.agents/skills/litespec-shared/delegation-active.md';
+  const native = '.codex/agents/litespec-search.toml';
+  const originalMarker = read(f, marker);
+  const originalNative = read(f, native);
+  const output = run(f, '12\nno');
+  assert.equal(read(f, marker), originalMarker);
+  assert.equal(read(f, native), originalNative);
+  const protocol = read(f, '.agents/skills/litespec-shared/protocol.md');
+  assert.match(protocol, /only if its adapter matches the current client/);
+  assert.match(protocol, /Unknown or different client: normal workflow/);
+  assert.match(output, /Agente: Zed \| Modo: Normal/);
+  assert.match(output, /configuracion de Codex se conserva/);
+  run(f, '1\n2\nno');
+  assert.equal(read(f, native), originalNative);
+}
+
+for (const agent of Array.from({length:13}, (_,i) => String(i+1))) {
   const f = fixture(`basic-${agent}`);
   const output = run(f, agent + (['1','2'].includes(agent) ? '\n' : '') + '\nno');
   assert.doesNotMatch(output, /gpt-6-luna/);
+  assert(!fs.existsSync(path.join(f.root,'.gitignore')), 'do not create a missing .gitignore');
+  assert.match(output, /Agente: .+ \| Modo: Normal/);
+  assert.match(output, /creados=0; restaurados=0; conservados=0; guardados=0/);
+  const destinations = ['.agents','.claude','.github','.cursor','.opencode','.qoder','.gemini','.qwen','.cline','.devin','.ade','.agents','.minimax'];
+  const skills = destinations[Number(agent)-1]+'/skills';
+  assert(!fs.existsSync(path.join(f.root,skills,'litespec-shared/delegation-active.md')));
+  for (const skill of ['explore','propose','apply','modify','verify','archive']) {
+    const rel = 'litespec-'+skill+'/SKILL.md';
+    assert.equal(read(f,skills+'/'+rel), fs.readFileSync(path.join(source,sources,rel),'utf8'));
+  }
   assert(!fs.existsSync(path.join(f.root,'.codex/agents')));
   assert(!fs.existsSync(path.join(f.root,'.claude/agents')));
   if (agent === '13') assert(fs.existsSync(path.join(f.root,'.minimax/skills/litespec-explore/SKILL.md')));
@@ -49,6 +136,9 @@ for (const [agent, adapter, ext] of [['1','codex','toml'],['2','claude','md']]) 
   const rel = adapter === 'codex' ? '.agents/skills' : '.claude/skills';
   const output = run(f, `${agent}\n2\nmodel-search\nlow\nmodel-plan\nhigh\n\n\nno`);
   assert.match(output, /Facil .*gpt-6-luna.*medium.*haiku.*medium/);
+  assert.match(output, /Modo: Auto model experimental - modelos por rol/);
+  assert.match(output, /creados=4; restaurados=0; conservados=0; guardados=0/);
+  assert.match(output, /Modelos no comprobados en ejecucion/);
   assert.match(output, /Media .*gpt-6\.1-sol.*medium.*sonnet.*medium/);
   assert.match(output, /Pesada .*gpt-6-astra.*medium.*opus.*medium/);
   const agents = `.${adapter}/agents`;
@@ -59,17 +149,20 @@ for (const [agent, adapter, ext] of [['1','codex','toml'],['2','claude','md']]) 
   assert(read(f,marker).includes(`Adapter: ${adapter}`));
   const original = read(f,native)+'\n# personal customization\n';
   fs.writeFileSync(path.join(f.root,native),original);
-  assert.match(run(f, `${agent}\n2\nno`), /Facil .*gpt-6-luna.*haiku/);
+  const reinstall = run(f, `${agent}\n2\nno`);
+  assert.match(reinstall, /creados=0; restaurados=0; conservados=4; guardados=0/);
   assert.equal(read(f,native),original);
   fs.writeFileSync(path.join(f.root,agents,`unrelated.${ext}`),'personal agent');
-  run(f, `${agent}\n\nno`);
+  const disabled = run(f, `${agent}\n\nno`);
+  assert.match(disabled, /creados=0; restaurados=0; conservados=0; guardados=4/);
   for (const role of ['search','plan','implement']) {
     assert(!fs.existsSync(path.join(f.root,agents,`litespec-${role}.${ext}`)), `${role} is still registered after disabling`);
   }
   assert(!fs.existsSync(path.join(f.root,marker)), 'routing marker is still active');
   assert.equal(read(f,`${agents}/unrelated.${ext}`),'personal agent');
   run(f, `${agent}\n1\nno`);
-  run(f, `${agent}\n2\nno`);
+  const restored = run(f, `${agent}\n2\nno`);
+  assert.match(restored, /creados=0; restaurados=4; conservados=0; guardados=0/);
   assert(read(f,marker).includes(`Adapter: ${adapter}`));
   assert.equal(read(f,native),original);
   const saved = `.litespec/disabled-agents/${adapter}/litespec-search.${ext}`;
@@ -106,4 +199,4 @@ for (const kind of ['model','effort','collision','ancestor','missing']) {
   run(f,input,false);
   assert(!fs.existsSync(path.join(f.root,'.agents/skills')));
 }
-console.log(`PASS ${engine}: defaults, both adapters, disable/reactivate, customization, cleanup, invalid input and conflicts. Fixtures: ${base}`);
+console.log(`PASS ${engine}: all 13 agents, Codex/Zed isolation contract, summaries, both adapters, disable/reactivate, customization, cleanup, invalid input and conflicts. Fixtures: ${base}`);

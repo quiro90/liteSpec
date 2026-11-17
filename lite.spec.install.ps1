@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -30,6 +30,57 @@ function Install-LiteSpec {
             }
             $current = Split-Path -Parent $current
         }
+    }
+
+    function Update-GitIgnore {
+        $ignorePath = Join-Path $projectRoot '.gitignore'
+        if (-not (Test-Path -LiteralPath $ignorePath -PathType Leaf)) { return }
+        Assert-LocalPath $ignorePath
+        Write-Host 'Se encontró un archivo .gitignore.'
+        [string]$ignoreAnswer = Read-Host '¿Añadir el instalador (script y carpeta fuente) y las skills de LiteSpec? [y/yes/si/s] Ambos | [i/ins] Solo instalador | [otra respuesta] No'
+        $ignoreAnswer = $ignoreAnswer.Trim().ToLowerInvariant()
+        if ($ignoreAnswer -notin @('y', 'yes', 'si', 'sí', 's', 'i', 'ins')) { return }
+        $entries = @([System.IO.Path]::GetFileName($PSCommandPath), 'liste.spec.steps/')
+        if ($ignoreAnswer -notin @('i', 'ins')) {
+            foreach ($skillFolder in $folders) { $entries += "$relative/$skillFolder/" }
+        }
+        $existing = [System.IO.File]::ReadAllText($ignorePath)
+        $lines = $existing -split '\r?\n'
+        $additions = @()
+        $gitAvailable = $null -ne (Get-Command git -CommandType Application -ErrorAction SilentlyContinue)
+        foreach ($entry in $entries) {
+            $ignored = $false
+            $gitStatus = 128
+            if ($gitAvailable) {
+                $oldPreference = $ErrorActionPreference
+                try {
+                    $ErrorActionPreference = 'Continue'
+                    & git -C $projectRoot check-ignore --no-index -q -- $entry 2>$null
+                    $gitStatus = $LASTEXITCODE
+                } finally { $ErrorActionPreference = $oldPreference }
+            }
+            if ($gitStatus -eq 0) { continue }
+            if ($gitStatus -ne 1) {
+                # Without Git/repository, recognize literal rules and parent directories.
+                foreach ($line in $lines) {
+                    $rule = $line.TrimEnd([char]13)
+                    if (-not $rule -or $rule.StartsWith('#')) { continue }
+                    $negated = $rule.StartsWith('!')
+                    if ($negated) { $rule = $rule.Substring(1) }
+                    $rule = $rule.TrimStart('/').TrimEnd('/')
+                    if ($rule -and ($entry.TrimEnd('/') -ceq $rule -or $entry.StartsWith($rule + '/', [System.StringComparison]::Ordinal))) { $ignored = -not $negated }
+                }
+                if ($ignored) { continue }
+            }
+            $additions += '/' + $entry
+        }
+        if ($additions.Count) {
+            $newline = if ($existing.Contains("`r`n")) { "`r`n" } else { "`n" }
+            $prefix = if ($existing.Length -and -not $existing.EndsWith("`n")) { $newline } else { '' }
+            Assert-LocalPath $ignorePath
+            [System.IO.File]::AppendAllText($ignorePath, $prefix + ($additions -join $newline) + $newline, (New-Object System.Text.UTF8Encoding($false)))
+        }
+        Write-Host ".gitignore: $($additions.Count) reglas añadidas; se conserva el contenido existente."
     }
 
     Assert-LocalPath $PSCommandPath
@@ -84,18 +135,24 @@ function Install-LiteSpec {
 
     # Collect and validate optional configuration before writing anything.
     $nativeFiles = @()
+    $agentNames = @('Codex', 'Claude Code', 'GitHub Copilot', 'Cursor', 'OpenCode', 'Qoder CLI', 'Gemini CLI', 'Qwen Code', 'Cline', 'Devin Local', 'ADE', 'Zed', 'MiniMax Code')
+    $agentName = $agentNames[[int]$choice.Trim() - 1]
+    $modeLabel = 'Normal'
+    $enable = $false
+    $created = 0; $restored = 0; $preserved = 0; $savedCount = 0
     if ($choice.Trim() -in @('1', '2')) {
-        Write-Host '1) Normal [predeterminado, desactiva Auto model]  2) Activar Auto model (experimental)'
-        Write-Host 'Auto model delega tareas a subagentes nativos y puede aumentar el consumo de tokens.'
+        Write-Host '1) Normal - sin delegacion de LiteSpec [predeterminado]  2) Auto model experimental - modelos por rol'
+        Write-Host 'Normal desactiva Auto model para este agente. Auto model puede aumentar el consumo de tokens.'
         [string]$mode = Read-Host 'Opcion [1]'
         if ($mode.Trim() -notin @('', '1', '2')) { throw 'Opcion invalida; no se instalo nada.' }
         $enable = $mode.Trim() -eq '2'
         if ($enable) {
+            $modeLabel = 'Auto model experimental - modelos por rol'
             Write-Host 'Ejemplos por dificultad (modelo / esfuerzo, segun disponibilidad)'
             Write-Host '  Facil (buscar archivos)        | Codex: gpt-6-luna / medium   | Claude Code: haiku / medium'
             Write-Host '  Media (plan o cambio acotado)   | Codex: gpt-6.1-sol / medium  | Claude Code: sonnet / medium'
             Write-Host '  Pesada (depuracion compleja)   | Codex: gpt-6-astra / medium  | Claude Code: opus / medium'
-            Write-Host 'Usa la columna de tu agente. Enter deja el campo con la herencia o el valor nativo.'
+            Write-Host 'Usa la columna de tu agente. Enter usa la herencia/default del cliente; no elige modelos por dificultad.'
         }
         $adapter = if ($choice.Trim() -eq '1') { 'codex' } else { 'claude' }
         $extension = if ($adapter -eq 'codex') { 'toml' } else { 'md' }
@@ -129,6 +186,7 @@ function Install-LiteSpec {
                 continue
             }
             if ($hasActive) {
+                $preserved++
                 Write-Host "Se conserva: $active"
                 continue
             }
@@ -139,10 +197,10 @@ function Install-LiteSpec {
             if (-not $role) {
                 $content = "# Experimental - native delegation enabled`nAdapter: $adapter. Use litespec-search, litespec-plan and litespec-implement when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan,implement}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings.`n"
             } else {
-                [string]$model = Read-Host "$role - modelo (Enter para usar la herencia nativa)"
+                [string]$model = Read-Host "$role - modelo"
                 $model = $model.Trim()
                 if ($model -and $model -notmatch '^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$') { throw 'Identificador de modelo invalido.' }
-                [string]$effort = Read-Host "$role - esfuerzo compatible (vacio: herencia/default nativo)"
+                [string]$effort = Read-Host "$role - esfuerzo compatible"
                 $effort = $effort.Trim()
                 $allowed = if ($adapter -eq 'codex') { @('', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra') } else { @('', 'low', 'medium', 'high', 'xhigh', 'max') }
                 if ($effort -notin $allowed) { throw 'Esfuerzo invalido. Compatibilidad depende del modelo y cliente.' }
@@ -187,16 +245,23 @@ function Install-LiteSpec {
         if ($native.ContainsKey('Source')) {
             Assert-LocalPath $native.Source
             [System.IO.File]::Move($native.Source, $native.Path)
+            if ($enable) { $restored++ } else { $savedCount++ }
             continue
         }
         $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($native.Content)
         $stream = [System.IO.File]::Open($native.Path, [System.IO.FileMode]::CreateNew)
         try { $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
         if ([System.IO.File]::ReadAllText($native.Path) -cne $native.Content) { throw "Fallo la verificacion: $($native.Path)" }
+        $created++
     }
-    Write-Host "Instalado y verificado en $destination. Abre una nueva sesion del agente."
+    Write-Host "Agente: $agentName | Modo: $modeLabel"
+    Write-Host "Skills copiadas y verificadas en $destination."
+    Write-Host "Archivos de configuracion: creados=$created; restaurados=$restored; conservados=$preserved; guardados=$savedCount."
+    if ($choice.Trim() -eq '12') { Write-Host 'Zed usa el flujo normal; cualquier configuracion de Codex se conserva y solo aplica en Codex.' }
+    if ($enable) { Write-Host "Configuracion: $agentRoot. Modelos no comprobados en ejecucion; confirma su carga en el cliente." }
+    Write-Host 'Abre una nueva sesion del agente para aplicar el modo.'
     [string]$answer = Read-Host 'Borrar fuentes de liste.spec.steps/ e instalador ejecutado? [si/yes/y; otra respuesta conserva]'
-    if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim() -notmatch '^(si|s\u00ed|yes|y)$') { return }
+    if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim() -notmatch '^(si|s\u00ed|yes|y)$') { Update-GitIgnore; return }
 
     # Delete only verified package files; preserve anything added by the user.
     foreach ($file in $files) {
@@ -221,6 +286,7 @@ function Install-LiteSpec {
     Assert-LocalPath $PSCommandPath
     Remove-Item -LiteralPath $PSCommandPath
     Write-Host 'Limpieza terminada. Se conservaron los archivos adicionales, si los habia.'
+    Update-GitIgnore
 }
 
 try { Install-LiteSpec } catch {

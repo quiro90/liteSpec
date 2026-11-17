@@ -1,0 +1,6 @@
+# Closure
+
+1. Follow [verification](verification.md) for the whole change; require all steps done and no required work pending. Remove explicitly dropped tasks or record exclusions; never mark unperformed work complete.
+2. Check consistency among spec decisions, required docs, affected index links, and verified results. Record paths/result or no-update reason in spec.md; missing required docs block closure.
+3. Summarize outcome, checks, docs, and limitations. Require explicit archive authorization covering completed scope; reuse valid authorization. Implementation permission is insufficient. If missing, ask after verification and wait; approval cannot replace checks.
+4. While blocked, record one closure field in spec.md: `pending-verification`, or `pending-confirmation` once verified, plus missing item/next action; report without duplicating task lists. Once verified and authorized, record both and move the whole `.litespec/specs/<spec-name>/` folder to `.litespec/archived/<YYMMddHHmm>-<spec-name>/` using local closure time. Never overwrite or retain an active copy. Repair affected relative links and verify after moving. Mark done only on success; otherwise record/report incomplete closure and next action. Report docs/archive paths. Later changes need a new spec.

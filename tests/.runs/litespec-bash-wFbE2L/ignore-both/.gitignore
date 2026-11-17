@@ -1,0 +1,11 @@
+# reglas propias
+node_modules/
+/lite.spec.install.sh
+/liste.spec.steps/
+/.agents/skills/litespec-explore/
+/.agents/skills/litespec-propose/
+/.agents/skills/litespec-apply/
+/.agents/skills/litespec-modify/
+/.agents/skills/litespec-verify/
+/.agents/skills/litespec-archive/
+/.agents/skills/litespec-shared/

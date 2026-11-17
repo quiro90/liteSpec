@@ -37,6 +37,56 @@ main() {
         done
     }
 
+    update_gitignore() {
+        local ignore_path="$project_root/.gitignore" ignore_answer entry line rule negated ignored git_status
+        local existing last_char newline=$'\n' addition_count=0
+        local entries=() additions=('')
+        [[ -f "$ignore_path" ]] || return 0
+        assert_local_path "$ignore_path"
+        printf '%s\n' 'Se encontró un archivo .gitignore.'
+        read -r -p '¿Añadir el instalador (script y carpeta fuente) y las skills de LiteSpec? [y/yes/si/s] Ambos | [i/ins] Solo instalador | [otra respuesta] No: ' ignore_answer || ignore_answer=''
+        case "$ignore_answer" in
+            [yY]|[yY][eE][sS]|[sS][iI]|[sS][íÍ]|[sS]) entries=("$(basename -- "$script_path")" 'liste.spec.steps/');
+                for folder in "${folders[@]}"; do entries+=("$relative/$folder/"); done ;;
+            [iI]|[iI][nN][sS]) entries=("$(basename -- "$script_path")" 'liste.spec.steps/') ;;
+            *) return 0 ;;
+        esac
+        existing=$(cat -- "$ignore_path"; printf x) # Keep final newlines for CRLF detection.
+        [[ "$existing" != *$'\r\n'* ]] || newline=$'\r\n'
+        for entry in "${entries[@]}"; do
+            git_status=128
+            if command -v git >/dev/null 2>&1; then
+                if git -C "$project_root" check-ignore --no-index -q -- "$entry" 2>/dev/null; then git_status=0; else git_status=$?; fi
+            fi
+            [[ "$git_status" != 0 ]] || continue
+            if [[ "$git_status" != 1 ]]; then
+                # Without Git/repository, recognize literal rules and parent directories.
+                ignored=false
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    rule=${line%$'\r'}
+                    [[ -n "$rule" && "$rule" != \#* ]] || continue
+                    negated=false
+                    if [[ "$rule" == \!* ]]; then negated=true; rule=${rule#\!}; fi
+                    rule=${rule#/}; rule=${rule%/}
+                    if [[ -n "$rule" && ( "${entry%/}" == "$rule" || "$entry" == "$rule/"* ) ]]; then
+                        if [[ "$negated" == true ]]; then ignored=false; else ignored=true; fi
+                    fi
+                done < "$ignore_path"
+                [[ "$ignored" != true ]] || continue
+            fi
+            additions+=("/$entry")
+            addition_count=$((addition_count+1))
+        done
+        if [[ "$addition_count" != 0 ]]; then
+            assert_local_path "$ignore_path"
+            # Preserve existing bytes, including files without a final newline.
+            last_char=$(tail -c 1 -- "$ignore_path"; printf x)
+            if [[ -s "$ignore_path" && "$last_char" != $'\nx' ]]; then printf '%s' "$newline" >> "$ignore_path"; fi
+            for ((i=1; i<${#additions[@]}; i++)); do printf '%s%s' "${additions[$i]}" "$newline" >> "$ignore_path"; done
+        fi
+        printf '.gitignore: %s reglas añadidas; se conserva el contenido existente.\n' "$addition_count"
+    }
+
     for file in "${files[@]}"; do
         assert_local_path "$source_root/$file"
         if [[ ! -f "$source_root/$file" ]]; then
@@ -90,17 +140,21 @@ main() {
     # A sentinel avoids empty-array nounset behavior in older Bash releases.
     local native_paths=('') native_contents=('') native_sources=('') roles=()
     local mode adapter extension agent_root disabled_root role name model effort description instructions content active saved i
+    local agent_names=('Codex' 'Claude Code' 'GitHub Copilot' 'Cursor' 'OpenCode' 'Qoder CLI' 'Gemini CLI' 'Qwen Code' 'Cline' 'Devin Local' 'ADE' 'Zed' 'MiniMax Code')
+    local agent_name=${agent_names[$((choice-1))]} mode_label=Normal
+    local created=0 restored=0 preserved=0 saved_count=0
     if [[ "$choice" == 1 || "$choice" == 2 ]]; then
-        printf '%s\n' '1) Normal [predeterminado, desactiva Auto model]  2) Activar Auto model (experimental)' 'Auto model delega tareas a subagentes nativos y puede aumentar el consumo de tokens.'
+        printf '%s\n' '1) Normal - sin delegacion de LiteSpec [predeterminado]  2) Auto model experimental - modelos por rol' 'Normal desactiva Auto model para este agente. Auto model puede aumentar el consumo de tokens.'
         read -r -p 'Opcion [1]: ' mode || mode=''
         case "$mode" in ''|1|2) ;; *) printf '%s\n' 'Opcion invalida; no se instalo nada.' >&2; return 1 ;; esac
         if [[ "$mode" == 2 ]]; then
+            mode_label="Auto model experimental - modelos por rol"
             printf '%s\n' \
                 'Ejemplos por dificultad (modelo / esfuerzo, segun disponibilidad)' \
                 '  Facil (buscar archivos)        | Codex: gpt-6-luna / medium   | Claude Code: haiku / medium' \
                 '  Media (plan o cambio acotado)   | Codex: gpt-6.1-sol / medium  | Claude Code: sonnet / medium' \
                 '  Pesada (depuracion compleja)   | Codex: gpt-6-astra / medium  | Claude Code: opus / medium' \
-                'Usa la columna de tu agente. Enter deja el campo con la herencia o el valor nativo.'
+                'Usa la columna de tu agente. Enter usa la herencia/default del cliente; no elige modelos por dificultad.'
         fi
         if [[ "$choice" == 1 ]]; then adapter=codex; extension=toml; else adapter=claude; extension=md; fi
         agent_root="$project_root/.$adapter/agents"
@@ -139,6 +193,7 @@ main() {
                 continue
             fi
             if [[ -e "$active" ]]; then
+                preserved=$((preserved+1))
                 printf 'Se conserva: %s\n' "$active"
                 continue
             fi
@@ -151,9 +206,9 @@ main() {
             if [[ -z "$role" ]]; then
                 content=$'# Experimental - native delegation enabled\n'"Adapter: $adapter. Use litespec-search, litespec-plan and litespec-implement when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan,implement}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings."$'\n'
             else
-                read -r -p "$role - modelo (Enter para usar la herencia nativa): " model || return 1
+                read -r -p "$role - modelo: " model || return 1
                 if [[ -n "$model" && ! "$model" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$ ]]; then printf '%s\n' 'Identificador de modelo invalido.' >&2; return 1; fi
-                read -r -p "$role - esfuerzo compatible (vacio: herencia/default nativo): " effort || return 1
+                read -r -p "$role - esfuerzo compatible: " effort || return 1
                 case "$effort" in
                     ''|low|medium|high|xhigh|max) ;;
                     minimal|ultra) if [[ "$adapter" != codex ]]; then printf '%s\n' 'Esfuerzo invalido.' >&2; return 1; fi ;;
@@ -202,16 +257,23 @@ main() {
                 printf 'No se pudo mover la configuracion a %s\n' "$path" >&2
                 return 1
             fi
+            if [[ "$mode" == 2 ]]; then restored=$((restored+1)); else saved_count=$((saved_count+1)); fi
             continue
         fi
         (set -o noclobber; printf '%s' "${native_contents[$i]}" > "$path")
         if ! printf '%s' "${native_contents[$i]}" | cmp -s - "$path"; then printf 'Fallo la verificacion: %s\n' "$path" >&2; return 1; fi
+        created=$((created+1))
     done
-    printf 'Instalado y verificado en %s. Abre una nueva sesion del agente.\n' "$destination"
+    printf 'Agente: %s | Modo: %s\n' "$agent_name" "$mode_label"
+    printf 'Skills copiadas y verificadas en %s.\n' "$destination"
+    printf 'Archivos de configuracion: creados=%s; restaurados=%s; conservados=%s; guardados=%s.\n' "$created" "$restored" "$preserved" "$saved_count"
+    if [[ "$choice" == 12 ]]; then printf '%s\n' 'Zed usa el flujo normal; cualquier configuracion de Codex se conserva y solo aplica en Codex.'; fi
+    if [[ "${mode:-}" == 2 ]]; then printf 'Configuracion: %s. Modelos no comprobados en ejecucion; confirma su carga en el cliente.\n' "$agent_root"; fi
+    printf '%s\n' 'Abre una nueva sesion del agente para aplicar el modo.'
     read -r -p 'Borrar fuentes de liste.spec.steps/ e instalador ejecutado? [si/yes/y; otra respuesta conserva]: ' answer || answer=''
     case "$answer" in
         [sS][iI]|[sS][íÍ]|[yY][eE][sS]|[yY]) ;;
-        *) return 0 ;;
+        *) update_gitignore; return 0 ;;
     esac
 
     # Delete only verified package files; rmdir preserves nonempty folders.
@@ -229,6 +291,7 @@ main() {
     assert_local_path "$script_path"
     rm -- "$script_path"
     printf '%s\n' 'Limpieza terminada. Se conservaron los archivos adicionales, si los habia.'
+    update_gitignore
 }
 
 # Parse the entire function before execution so deleting this script is safe.

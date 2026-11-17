@@ -59,7 +59,7 @@ Choose the agent. Codex and Claude Code then offer optional model configuration.
 | [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` |
 | MiniMax Code | `.minimax/skills/` |
 
-Zed Agent requires a trusted project and shares this destination with Codex. For external agents inside Zed, select their own installer option. ADE uses project skills here, not its bundled resources/agent-skills directory.
+Zed Agent requires a trusted project and shares this destination with Codex. Auto model applies only in the client named by its marker; Zed keeps the normal workflow and preserves Codex configuration. For external agents inside Zed, select their own installer option. ADE uses project skills here, not its bundled resources/agent-skills directory.
 
 The six skills and shared rules are copied. LICENSE stays at the repository root. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, `verification.md` when checking results, `documentation.md` when consolidating living docs, and `closure.md` when archiving. Do not load the entire folder by default. Reinstallation replaces only the thirteen listed package files in the seven LiteSpec folders; extra files and other skills are preserved. Destination links or file/directory conflicts stop installation before replacement.
 
@@ -69,13 +69,17 @@ When upgrading an older installation, replace the `speclite-*` folders with `lit
 
 At the end, `si`, `sí`, `yes`, or `y` confirms deletion of the installed source files and the installer you ran; any other response keeps them. Only empty folders are removed: additional files, documentation, and project code are preserved.
 
+If `.gitignore` already exists, the final prompt offers **y/yes/si/s** for the installer (executed script and source folder) plus the seven LiteSpec skill folders, **i/ins** for the installer only, or any other answer to leave it unchanged. Existing rules are preserved; only missing exclusions are appended. Git, when available, also recognizes ignore patterns; without Git, literal rules and parent directories are checked. No new .gitignore is created, and already tracked files remain tracked.
+
 Start a new agent session and ask: **“Use litespec-explore for [your change].”** Then continue with `litespec-propose` and `litespec-apply`; you can request a specific step or all pending steps. Finish with `litespec-archive`. A clear explicit request can settle Explore without another confirmation; unresolved material questions still require answers. Confirming scope alone does not authorize implementation.
 
-**Auto model (experimental, Codex and Claude Code)** is optional every time you run the installer. The default is the normal LiteSpec workflow. Choose Auto model to delegate search, planning, and implementation to native subagents with their own model settings. Delegation can increase token use.
+**Auto model (experimental, Codex and Claude Code)** is optional every time you run the installer. The default is **Normal — no LiteSpec delegation**. **Experimental Auto model — models per role** assigns models by responsibility, not automatically by task difficulty. Choose Auto model to delegate search, planning, and implementation to native subagents with their own model settings. Delegation can increase token use.
 
 When you select Auto model, the installer shows model and effort examples for easy, medium, and hard tasks in both Codex and Claude Code. Use your agent's column as a starting point. Enter a compatible model and effort per role, or leave fields blank for native inheritance/defaults. Installation validates format, not account/model availability or client compatibility. Codex definitions live in `.codex/agents/`; Claude definitions in `.claude/agents/`. No global settings or new dependencies are added. Current native support is required; open a new session and confirm the agents/models loaded.
 
 To turn Auto model off, rerun the installer for the same agent and choose **Normal**. LiteSpec moves its subagents and activation marker to `.litespec/disabled-agents/<adapter>/` (`codex` or `claude`). Choosing **Auto model** again restores the saved models and effort settings. You can edit the role files directly. If you removed the installer and sources, copy a fresh package to reinstall. The installed `litespec-shared/delegation.md` remains available for manual changes.
+
+The final summary identifies the agent, mode, and configuration files created, restored, preserved, or saved. File installation checks do not verify models at runtime.
 
 Delegate only useful bounded work, one worker at a time. On failure, report and continue with the current agent within authorization. Higher-priority instructions, permissions, native overrides and fallbacks still apply.
 

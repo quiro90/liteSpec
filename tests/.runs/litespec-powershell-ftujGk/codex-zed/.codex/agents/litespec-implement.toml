@@ -1,3 +1,0 @@
-name = "litespec-implement"
-description = "Implement only authorized bounded work and verify its results."
-developer_instructions = "Implement only authorized bounded work and verify its results. Read applicable AGENTS.md and .agents/skills/litespec-shared/protocol.md. Do not delegate. Respect parent authorization and existing edits. Parent owns LiteSpec records and Archive. Return evidence, checks, uncertainty and pending work."

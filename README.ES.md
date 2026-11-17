@@ -27,21 +27,21 @@ Antes de archivar se comprueban tareas, aceptación, integración, compatibilida
 
 ## Instalar
 
-Copia la carpeta `steps/` completa y el instalador correspondiente en la **raíz del proyecto donde usarás LiteSpec**, uno al lado del otro. No necesitas Python, Node ni descargas adicionales.
+Copia la carpeta `liste.spec.steps/` completa y el instalador correspondiente en la **raíz del proyecto donde usarás LiteSpec**, uno al lado del otro. No necesitas Python, Node ni descargas adicionales.
 
 **Windows — PowerShell:**
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\lite.spec.install.ps1
 ```
 
 **Linux / macOS — Bash:**
 
 ```bash
-bash ./install.sh
+bash ./lite.spec.install.sh
 ```
 
-Elige el agente (no el modelo). La instalación es local al proyecto:
+Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional. La instalación es local al proyecto:
 
 | Agente | Destino |
 |---|---|
@@ -57,10 +57,11 @@ Elige el agente (no el modelo). La instalación es local al proyecto:
 | [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` |
 | [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` |
 | [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` |
+| MiniMax Code | `.minimax/skills/` |
 
 Zed Agent requiere un proyecto de confianza y comparte este destino con Codex. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
 
-Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios, `verification.md` al comprobar resultados `documentation.md` al consolidar notas y `closure.md` al archivar. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los doce archivos enumerados del paquete en las siete carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
+Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios, `verification.md` al comprobar resultados `documentation.md` al consolidar notas y `closure.md` al archivar. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los trece archivos enumerados del paquete en las siete carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; el impacto documental siempre se evalúa antes de cerrar.
 
@@ -69,6 +70,14 @@ Si actualizas una instalación anterior, reemplaza las carpetas `speclite-*` por
 Al terminar, `si`, `sí`, `yes` o `y` confirma borrar los archivos fuente instalados y el instalador ejecutado; cualquier otra respuesta los conserva. Solo se eliminan carpetas vacías: archivos adicionales, documentación y código del proyecto se mantienen.
 
 Abre una nueva sesión del agente y pide: **«Usa litespec-explore para [tu cambio]»**. Después continúa con `litespec-propose` y `litespec-apply`; puedes pedir un paso concreto o todos los pendientes. Finaliza con `litespec-archive`. Un pedido explícito y claro puede resolver Explore sin otra confirmación; las preguntas materiales pendientes requieren respuesta. Confirmar solo el alcance no autoriza la implementación.
+
+**Auto model (experimental, Codex y Claude Code)** es opcional cada vez que ejecutas el instalador. La opción predeterminada es el flujo normal de LiteSpec. Elige Auto model para delegar búsqueda, análisis e implementación a subagentes nativos con su propia configuración de modelo. Delegar puede aumentar el consumo de tokens.
+
+Al elegir Auto model, el instalador muestra ejemplos de modelo y esfuerzo para tareas fáciles, medias y pesadas en Codex y Claude Code. Usa la columna de tu agente como punto de partida. Para cada rol puedes ingresar un modelo y esfuerzo compatibles o dejar los campos vacíos para usar la herencia o el valor predeterminado del cliente. El instalador valida el formato, no la disponibilidad ni la compatibilidad del modelo en tu cuenta o versión. Codex crea archivos en `.codex/agents/`; Claude en `.claude/agents/`. La instalación es local al proyecto y funciona con el soporte nativo del cliente. Abre una nueva sesión y comprueba que se cargaron los agentes y modelos.
+
+Para apagar Auto model, vuelve a ejecutar el instalador para el mismo agente y elige **Normal**. LiteSpec mueve sus subagentes y el marcador de activación a `.litespec/disabled-agents/<adaptador>/` (`codex` o `claude`). Si vuelves a elegir **Auto model**, se restauran los modelos y niveles de esfuerzo guardados. Puedes editar directamente los archivos de cada rol. Si borraste el instalador y las fuentes, copia un paquete nuevo para reinstalar. La guía instalada `litespec-shared/delegation.md` sigue disponible para cambios manuales.
+
+Solo se delegan trabajos acotados cuando aporta valor, con un trabajador a la vez. Ante fallos se informa y se continúa con el agente actual dentro del alcance autorizado. Las instrucciones superiores, permisos, overrides y fallbacks nativos siguen aplicando.
 
 ## Licencia
 

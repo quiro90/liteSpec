@@ -2,6 +2,8 @@
 
 Read rules once per context; reread only if changed or unavailable. Load only required references. Use available tools; no provider is required.
 
+If sibling `delegation-active.md` exists, read it and [delegation rules](delegation.md) before considering native delegation. Otherwise use the normal workflow.
+
 - **Language:** use the user's language for communication and new specs; preserve existing document languages, paths, skill names, states, and policy tags.
 - **Record:** keep each change's spec.md, steps, and notes in `.litespec/specs/<spec-name>/` relative to the project root. Create directories as needed without collisions. Preserve enough context to resume without conversation history.
 - **Agreement:** record the explicit request/answers and agreed scope in spec.md. Clear requests settle Explore; ask only unresolved material questions. Suggestions and source edits are not agreements. Record implementation and archive authorizations separately with their scopes; scope confirmation and ready status authorize neither. Reuse valid agreements; never invent them.

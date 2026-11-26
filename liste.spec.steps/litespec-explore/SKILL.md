@@ -7,6 +7,9 @@ Read the [shared rules](../litespec-shared/protocol.md) and [specification contr
 
 1. Read applicable AGENTS.md. Start with `.litespec/docs/index.md` and relevant topic notes if present, then other relevant documentation; verify findings against targeted source material. Search by goal keywords, paths, classes, and symbols; inspect matching sections, not whole folders/files. Expand only to resolve a concrete gap; stop when outcome, scope, and affected artifacts are understood. Consult `.litespec/archived/` only to reconstruct a specific missing decision or rationale. Separate verified facts, assumptions, and unresolved decisions.
 2. Explain outcome and scope; recommend an option when alternatives matter. Resolve continuity/compatibility under the specification contract. Apply the shared agreement rule; wait for answers only to unresolved material questions.
-3. Record the agreement and continuity policy in spec.md, plus only findings needed for specification or implementation. Mark Explore confirmed only when material questions are resolved; otherwise record what remains. Keep the change draft for Propose.
+3. Capture the handoff beside the agreement in spec.md. Identify the observable outcome, its affected contract or entry point, the pattern another session can reuse, and any existing check that demonstrates success. For multiple outcomes, identify shared dependencies once. If a failure would be hard to detect, name the boundary and an example that would expose it. Leave unresolved decisions explicit.
+4. Mark Explore confirmed when material questions are resolved. Leave grouping and assignment to Propose and keep the change draft.
+
+The principal owns design. Read known paths and indexes directly; with role delegation enabled, use search only when a concrete question merits a separate context.
 
 For revisions to an existing active change, read and follow [incremental revision](../litespec-shared/revision.md) instead of restarting exploration. Do not implement.

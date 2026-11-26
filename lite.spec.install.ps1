@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -8,9 +8,16 @@ function Install-LiteSpec {
     $folders = @('litespec-explore', 'litespec-propose', 'litespec-apply', 'litespec-modify', 'litespec-verify', 'litespec-archive', 'litespec-shared')
     $files = @('litespec-explore/SKILL.md', 'litespec-propose/SKILL.md',
         'litespec-apply/SKILL.md', 'litespec-modify/SKILL.md', 'litespec-verify/SKILL.md', 'litespec-archive/SKILL.md',
-        'litespec-shared/protocol.md', 'litespec-shared/delegation.md',
+        'litespec-shared/serial.md', 'litespec-shared/adaptive-plan.md', 'litespec-shared/adaptive-apply.md', 'litespec-shared/easy-worker.md', 'litespec-shared/protocol.md', 'litespec-shared/delegation.md',
         'litespec-shared/specification.md', 'litespec-shared/revision.md',
         'litespec-shared/documentation.md', 'litespec-shared/closure.md', 'litespec-shared/verification.md')
+
+    # Compare the small packaged skill files using the runtime shared by PS 5.1 and 7.
+    function Get-PackageDigest([string]$Path) {
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try { return [Convert]::ToBase64String($sha.ComputeHash([IO.File]::ReadAllBytes($Path))) }
+        finally { $sha.Dispose() }
+    }
 
     # Check every existing component; never follow junctions or symbolic links.
     function Assert-LocalPath([string]$Path) {
@@ -91,7 +98,7 @@ function Install-LiteSpec {
     }
 
     Write-Host "LiteSpec - proyecto: $projectRoot"
-    Write-Host '1) Codex  2) Claude Code  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
+    Write-Host '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
     [string]$choice = Read-Host 'Agente [1-13]'
     $relative = switch (([string]$choice).Trim()) {
         '1' { '.agents/skills' }
@@ -135,32 +142,36 @@ function Install-LiteSpec {
 
     # Collect and validate optional configuration before writing anything.
     $nativeFiles = @()
+    $legacyMarker = $null
     $agentNames = @('Codex', 'Claude Code', 'GitHub Copilot', 'Cursor', 'OpenCode', 'Qoder CLI', 'Gemini CLI', 'Qwen Code', 'Cline', 'Devin Local', 'ADE', 'Zed', 'MiniMax Code')
     $agentName = $agentNames[[int]$choice.Trim() - 1]
-    $modeLabel = 'Normal'
+    $modeLabel = 'Clasico'
     $enable = $false
     $created = 0; $restored = 0; $preserved = 0; $savedCount = 0
     if ($choice.Trim() -in @('1', '2')) {
-        Write-Host '1) Normal - sin delegacion de LiteSpec [predeterminado]  2) Auto model experimental - modelos por rol'
-        Write-Host 'Normal desactiva Auto model para este agente. Auto model puede aumentar el consumo de tokens.'
-        [string]$mode = Read-Host 'Opcion [1]'
-        if ($mode.Trim() -notin @('', '1', '2')) { throw 'Opcion invalida; no se instalo nada.' }
-        $enable = $mode.Trim() -eq '2'
-        if ($enable) {
-            $modeLabel = 'Auto model experimental - modelos por rol'
-            Write-Host 'Ejemplos por dificultad (modelo / esfuerzo, segun disponibilidad)'
-            Write-Host '  Facil (buscar archivos)        | Codex: gpt-6-luna / medium   | Claude Code: haiku / medium'
-            Write-Host '  Media (plan o cambio acotado)   | Codex: gpt-6.1-sol / medium  | Claude Code: sonnet / medium'
-            Write-Host '  Pesada (depuracion compleja)   | Codex: gpt-6-astra / medium  | Claude Code: opus / medium'
-            Write-Host 'Usa la columna de tu agente. Enter usa la herencia/default del cliente; no elige modelos por dificultad.'
-        }
+        Write-Host 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive - delegar pasos Easy'
+        [string]$mode = Read-Host 'Modo [1]'
+        if ($mode.Trim() -notin @('', '1', '2')) { throw 'Modo invalido.' }
+        $adaptive = $mode.Trim() -eq '2'
+        Write-Host 'Delegacion interna de las skills: 1) Desactivada  2) Auto model por rol'
+        $roleDefault = if (Test-Path -LiteralPath (Join-Path $destination 'litespec-shared/delegation-active.md') -PathType Leaf) { '2' } else { '1' }
+        [string]$roleChoice = Read-Host "Roles [$roleDefault]"
+        if (-not $roleChoice.Trim()) { $roleChoice = $roleDefault }
+        if ($roleChoice.Trim() -notin @('1','2')) { throw 'Opcion de roles invalida.' }
+        $roleMode = $roleChoice.Trim() -eq '2'
+        $enable = $roleMode
+        if ($adaptive) { $modeLabel = 'Adaptive' }
+        if ($roleMode) { $modeLabel += ' + Auto model' }
         $adapter = if ($choice.Trim() -eq '1') { 'codex' } else { 'claude' }
         $extension = if ($adapter -eq 'codex') { 'toml' } else { 'md' }
         $agentRoot = Join-Path $projectRoot ".$adapter/agents"
         $disabledRoot = Join-Path $dataRoot "disabled-agents/$adapter"
         # Remove the marker first when disabling and install it last when enabling.
-        $roles = if ($enable) { @('search', 'plan', 'implement', '') } else { @('', 'search', 'plan', 'implement') }
+        # The retired implement role is only ever moved out of the active directory.
+        $roles = if ($enable) { @('implement', 'search', 'plan', '') } else { @('', 'implement', 'search', 'plan') }
+        $roles += 'easy'
         foreach ($role in $roles) {
+            $enable = if ($role -eq 'easy') { $adaptive } elseif ($role -eq 'implement') { $false } else { $roleMode }
             if ($role) {
                 $name = "litespec-$role.$extension"
                 $active = Join-Path $agentRoot $name
@@ -182,22 +193,30 @@ function Install-LiteSpec {
             $hasSaved = Test-Path -LiteralPath $saved
             if ($hasActive -and $hasSaved) { throw "Existen ambas configuraciones: $active y $saved. Revisa cual conservar." }
             if (-not $enable) {
-                if ($hasActive) { $nativeFiles += @{ Path = $saved; Source = $active } }
+                if ($hasActive) { $nativeFiles += @{ Path = $saved; Source = $active; Restore = $false } }
                 continue
             }
-            if ($hasActive) {
+            # A marker from an older release names the retired implement role: regenerate it.
+            if (-not $role) {
+                foreach ($path in @($active, $saved)) {
+                    if ((Test-Path -LiteralPath $path -PathType Leaf) -and ([System.IO.File]::ReadAllText($path) -match 'litespec-implement')) { $legacyMarker = $path }
+                }
+            }
+            if ($hasActive -and $legacyMarker -ne $active) {
                 $preserved++
                 Write-Host "Se conserva: $active"
                 continue
             }
-            if ($hasSaved) {
-                $nativeFiles += @{ Path = $active; Source = $saved }
+            if ($hasSaved -and $legacyMarker -ne $saved) {
+                $nativeFiles += @{ Path = $active; Source = $saved; Restore = $true }
                 continue
             }
             if (-not $role) {
-                $content = "# Experimental - native delegation enabled`nAdapter: $adapter. Use litespec-search, litespec-plan and litespec-implement when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan,implement}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings.`n"
+                $content = "# Experimental - native delegation enabled`nAdapter: $adapter. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings.`n"
             } else {
-                [string]$model = Read-Host "$role - modelo"
+                $defaultModel = if ($role -ne 'easy') { '' } elseif ($adapter -eq 'codex') { 'gpt-6.2-sol' } else { 'sonnet' }
+                [string]$model = Read-Host "$role - modelo [$defaultModel]"
+                if (-not $model.Trim()) { $model = $defaultModel }
                 $model = $model.Trim()
                 if ($model -and $model -notmatch '^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$') { throw 'Identificador de modelo invalido.' }
                 [string]$effort = Read-Host "$role - esfuerzo compatible"
@@ -205,11 +224,15 @@ function Install-LiteSpec {
                 $allowed = if ($adapter -eq 'codex') { @('', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra') } else { @('', 'low', 'medium', 'high', 'xhigh', 'max') }
                 if ($effort -notin $allowed) { throw 'Esfuerzo invalido. Compatibilidad depende del modelo y cliente.' }
                 $description = switch ($role) {
+                    'easy' { 'Execute only the Easy step explicitly assigned by the LiteSpec parent.' }
                     'search' { 'Gather concrete evidence with paths and lines; do not edit or decide scope.' }
                     'plan' { 'Analyze evidence and return a proposal; do not edit or implement.' }
-                    'implement' { 'Implement only authorized bounded work and verify its results.' }
                 }
-                $instructions = "$description Read applicable AGENTS.md and $relative/litespec-shared/protocol.md. Do not delegate. Respect parent authorization and existing edits. Parent owns LiteSpec records and Archive. Return evidence, checks, uncertainty and pending work."
+                if ($role -eq 'easy') {
+                    $instructions = "Follow $relative/litespec-shared/easy-worker.md for the assigned step. Do not delegate."
+                } else {
+                    $instructions = "$description Read applicable AGENTS.md and $relative/litespec-shared/protocol.md. Do not delegate. Respect parent authorization and existing edits. Parent owns LiteSpec records and Archive. Return evidence, checks, uncertainty and pending work."
+                }
                 if ($adapter -eq 'codex') {
                     $content = "name = `"litespec-$role`"`ndescription = `"$description`"`ndeveloper_instructions = `"$instructions`"`n"
                     if ($model) { $content += "model = `"$model`"`n" }
@@ -218,7 +241,7 @@ function Install-LiteSpec {
                     $content = "---`nname: litespec-$role`ndescription: $description`n"
                     if ($model) { $content += "model: '$model'`n" }
                     if ($effort) { $content += "effort: $effort`n" }
-                    if ($role -ne 'implement') { $content += "tools: Read, Grep, Glob`n" }
+                    if ($role -ne 'easy') { $content += "tools: Read, Grep, Glob`n" }
                     $content += "---`n`n$instructions`n"
                 }
             }
@@ -234,18 +257,19 @@ function Install-LiteSpec {
         Assert-LocalPath $target
         if (Test-Path -LiteralPath $target -PathType Leaf) { Remove-Item -LiteralPath $target }
         [System.IO.File]::Copy($source, $target, $false)
-        if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $target).Hash) {
+        if ((Get-PackageDigest $source) -cne (Get-PackageDigest $target)) {
             throw "Fallo la verificacion: $target. Se conservan los originales."
         }
     }
     [System.IO.Directory]::CreateDirectory($dataRoot) | Out-Null
+    if ($legacyMarker) { Assert-LocalPath $legacyMarker; Remove-Item -LiteralPath $legacyMarker }
     foreach ($native in $nativeFiles) {
         Assert-LocalPath $native.Path
         [System.IO.Directory]::CreateDirectory((Split-Path -Parent $native.Path)) | Out-Null
         if ($native.ContainsKey('Source')) {
             Assert-LocalPath $native.Source
             [System.IO.File]::Move($native.Source, $native.Path)
-            if ($enable) { $restored++ } else { $savedCount++ }
+            if ($native.Restore) { $restored++ } else { $savedCount++ }
             continue
         }
         $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($native.Content)
@@ -258,7 +282,7 @@ function Install-LiteSpec {
     Write-Host "Skills copiadas y verificadas en $destination."
     Write-Host "Archivos de configuracion: creados=$created; restaurados=$restored; conservados=$preserved; guardados=$savedCount."
     if ($choice.Trim() -eq '12') { Write-Host 'Zed usa el flujo normal; cualquier configuracion de Codex se conserva y solo aplica en Codex.' }
-    if ($enable) { Write-Host "Configuracion: $agentRoot. Modelos no comprobados en ejecucion; confirma su carga en el cliente." }
+    if ($modeLabel -ne 'Clasico') { Write-Host "Configuracion: $agentRoot. Modelos no comprobados en ejecucion; confirma su carga en el cliente." }
     Write-Host 'Abre una nueva sesion del agente para aplicar el modo.'
     [string]$answer = Read-Host 'Borrar fuentes de liste.spec.steps/ e instalador ejecutado? [si/yes/y; otra respuesta conserva]'
     if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim() -notmatch '^(si|s\u00ed|yes|y)$') { Update-GitIgnore; return }
@@ -269,7 +293,7 @@ function Install-LiteSpec {
         $target = Join-Path $destination $file
         Assert-LocalPath $source
         Assert-LocalPath $target
-        if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $target).Hash) {
+        if ((Get-PackageDigest $source) -cne (Get-PackageDigest $target)) {
             throw "El archivo cambio; se cancela la limpieza: $source"
         }
     }

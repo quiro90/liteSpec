@@ -8,6 +8,8 @@ La documentación generada sigue el mismo objetivo: mínima, organizada por tema
 
 ## Flujo
 
+El instalador ofrece **Clásico** para todos los agentes y **Adaptive** para Claude Code y Codex. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
+
 1. **Explore:** inspeccionar lo relevante y confirmar objetivo y alcance.
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
 3. **Apply:** ejecutar los pasos autorizados, revisar, realizar las comprobaciones requeridas e informar pendientes o preparación para Archive.
@@ -17,7 +19,7 @@ Todo lo generado vive en `.litespec/`: cambios activos en `specs/<spec-name>/` (
 
 **Modify (durante un cambio activo):** usa `litespec-modify` cuando cambien decisiones o archivos relevantes. Apply también atiende estas revisiones al detectarlas: actualiza solo las especificaciones y pasos afectados, reabre comprobaciones invalidadas y pregunta únicamente por decisiones pendientes. Conserva acuerdos válidos y progreso no afectado; un cambio archivado requiere otro nuevo enlazado.
 
-La documentación permanece en el proyecto, en `.litespec/docs/`; compatibilidad con Obsidian no selecciona un vault externo. El cierre verifica la documentación requerida y los enlaces afectados, e informa las rutas de documentación y archivo. Si no hace falta actualizar documentación, se registra el motivo sin crear notas vacías. Si falta documentación requerida, no se cierra.
+La documentación permanece en el proyecto, en `.litespec/docs/`; compatibilidad con Obsidian no selecciona un vault externo. Cada paso terminado registra una línea breve `Docs:` (tema destino y hechos durables, o `none`) mientras el trabajo está fresco; Archive consolida esas líneas en notas temáticas pequeñas una sola vez, sin releer todo el cambio. Actualizar la documentación viva pasa a ser tarea de un paso solo si el usuario lo pide u otro trabajo la necesita antes del cierre. El cierre verifica la documentación requerida y los enlaces afectados, e informa las rutas de documentación y archivo. Si no hace falta actualizar documentación, se registra el motivo sin crear notas vacías. Si falta documentación requerida, no se cierra.
 
 Cada `spec.md` registra una política de continuidad (`preserve`, `extend`, `replace` o `new`) y compatibilidad (`required`, `breaking-approved` o `not-applicable`), con una frase que delimita qué conservar, sustituir o migrar. Sirve para código, documentos y otros materiales; las etiquetas no autorizan eliminaciones por sí solas. Se guarda una sola vez, sin repetirla en cada paso.
 
@@ -61,7 +63,7 @@ Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma o
 
 Zed Agent requiere un proyecto de confianza y comparte este destino con Codex. Auto model solo se aplica en el cliente indicado por su marcador; Zed mantiene el flujo normal y conserva la configuración de Codex. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
 
-Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios, `verification.md` al comprobar resultados `documentation.md` al consolidar notas y `closure.md` al archivar. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los trece archivos enumerados del paquete en las siete carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
+Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios, `verification.md` al comprobar resultados, `documentation.md` al consolidar notas y `closure.md` al archivar. En Adaptive, `adaptive-plan.md` al clasificar pasos, `adaptive-apply.md` al ejecutarlos y `easy-worker.md` para el ejecutor Easy; `serial.md` solo si existe `.litespec/serial/`. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los archivos enumerados del paquete en las siete carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; el impacto documental siempre se evalúa antes de cerrar.
 
@@ -73,15 +75,28 @@ Si ya existe un archivo `.gitignore`, al finalizar se pregunta qué excluir: **y
 
 Abre una nueva sesión del agente y pide: **«Usa litespec-explore para [tu cambio]»**. Después continúa con `litespec-propose` y `litespec-apply`; puedes pedir un paso concreto o todos los pendientes. Finaliza con `litespec-archive`. Un pedido explícito y claro puede resolver Explore sin otra confirmación; las preguntas materiales pendientes requieren respuesta. Confirmar solo el alcance no autoriza la implementación.
 
-**Auto model (experimental, Codex y Claude Code)** es opcional cada vez que ejecutas el instalador. La opción predeterminada es **Normal — sin delegación de LiteSpec**. **Auto model experimental — modelos por rol** configura modelos por responsabilidad; no los selecciona automáticamente según la dificultad. Elige Auto model para delegar búsqueda, análisis e implementación a subagentes nativos con su propia configuración de modelo. Delegar puede aumentar el consumo de tokens.
+## Elección del modo en el instalador
 
-Al elegir Auto model, el instalador muestra ejemplos de modelo y esfuerzo para tareas fáciles, medias y pesadas en Codex y Claude Code. Usa la columna de tu agente como punto de partida. Para cada rol puedes ingresar un modelo y esfuerzo compatibles; Enter usa la herencia o el valor predeterminado del cliente. El instalador valida el formato, no la disponibilidad ni la compatibilidad del modelo en tu cuenta o versión. Codex crea archivos en `.codex/agents/`; Claude en `.claude/agents/`. La instalación es local al proyecto y funciona con el soporte nativo del cliente. Abre una nueva sesión y comprueba que se cargaron los agentes y modelos.
+En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independientes.
 
-Para apagar Auto model, vuelve a ejecutar el instalador para el mismo agente y elige **Normal**. LiteSpec mueve sus subagentes y el marcador de activación a `.litespec/disabled-agents/<adaptador>/` (`codex` o `claude`). Si vuelves a elegir **Auto model**, se restauran los modelos y niveles de esfuerzo guardados. Puedes editar directamente los archivos de cada rol. Si borraste el instalador y las fuentes, copia un paquete nuevo para reinstalar. La guía instalada `litespec-shared/delegation.md` sigue disponible para cambios manuales.
+| Pregunta | Opciones |
+|---|---|
+| Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
+| Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**: roles de solo lectura `search` y `plan` para análisis en cualquier fase. Enter conserva la activación actual; en un proyecto nuevo empieza desactivada. |
 
-El resumen final indica agente, modo y archivos de configuración creados, restaurados, conservados o guardados. Verificar la instalación de archivos no comprueba los modelos en ejecución.
+Los demás agentes usan Clásico. El instalador conserva los perfiles personalizados al desactivarlos y restaurarlos. Al crear un perfil puedes configurar modelo y esfuerzo. Abre una sesión nueva para cargarlo. El antiguo rol `implement` queda retirado: cualquier ejecución para Codex o Claude Code lo mueve a `.litespec/disabled-agents/` y regenera un marcador de activación antiguo; la delegación de implementación pertenece solo a Adaptive.
 
-Solo se delegan trabajos acotados cuando aporta valor, con un trabajador a la vez. Ante fallos se informa y se continúa con el agente actual dentro del alcance autorizado. Las instrucciones superiores, permisos, overrides y fallbacks nativos siguen aplicando.
+Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive asigna dificultad residual, responsable y revisión focalizada cuando corresponde. Apply completa las fases pendientes si se invoca directamente y despacha un paso Easy delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
+
+Para comparar los modos, parte de la misma revisión con los mismos requisitos, controles y configuración de roles. Cuenta desde Explore hasta la aceptación final. Compara cuota del principal por cambio aceptado, tiempo, correcciones y regresiones. Cada paso Adaptive registra `Executed:` (executor, principal o executor-then-principal) y su número de correcciones. Si el cliente oculta el consumo por modelo, deja ese dato como desconocido.
+
+**Un solo SPEC activo por proyecto (opcional).** Crea el directorio `.litespec/serial/` antes de iniciar sesiones en esa copia del proyecto. El primer principal adquiere el turno durante su invocación. Si hay competencia, la otra sesión informa y cede. Cuando el principal devuelve el control, otra sesión puede retomar el SPEC activo. Para abrir uno nuevo hay que archivar el anterior. Tras una interrupción, consulta la nota de propietario y confirma que todos los ejecutores se detuvieron antes de retirar manualmente `.litespec/serial/busy/`. Para desactivar la opción, quita el directorio serial vacío cuando no haya actividad.
+
+### Reconfigurar perfiles
+
+Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, muévelo a `.litespec/disabled-agents/codex/` o `.litespec/disabled-agents/claude/`.
+
+Para cambiar de modo, ejecuta el instalador para el mismo cliente. Si lo borraste, copia un paquete nuevo. Para desactivar los roles manualmente, mueve el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera a `.litespec/disabled-agents/codex/` o `.litespec/disabled-agents/claude/`. Para reactivarlos, devuelve cada archivo a su ubicación original. Si hay copias activas y guardadas del mismo archivo, resuelve el duplicado antes del cambio. Después abre una sesión nueva.
 
 ## Licencia
 

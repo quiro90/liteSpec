@@ -66,7 +66,7 @@ GitHub Actions ejecuta `go test` y `go vet` en Windows, macOS y Linux. Si pasan 
 
 ## Flujo
 
-El instalador ofrece **Clásico** para todos los agentes y **Adaptive experimental** para Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. Adaptive está en una etapa inicial de pruebas en todos los clientes compatibles. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
+El instalador ofrece **Clásico** para todos los agentes y **Adaptive experimental** para Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. Adaptive está en una etapa inicial de pruebas en todos los clientes compatibles. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal agrupa los pasos por impacto y complejidad, delega los que convenga a modelos más livianos y verifica los resultados. [Opciones del instalador](#elección-del-modo-en-el-instalador)
 
 1. **Explore:** inspeccionar lo relevante y confirmar objetivo y alcance.
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
@@ -141,14 +141,14 @@ En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independiente
 
 | Pregunta | Opciones |
 |---|---|
-| Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive experimental**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
-| Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**: roles de solo lectura `search` y `plan` para análisis en cualquier fase. Enter conserva la activación actual; en un proyecto nuevo empieza desactivada. |
+| Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive experimental**. En Adaptive, los pasos Muy fácil y Fácil pueden delegarse a sus respectivos ejecutores. El principal se ocupa de los pasos de dificultad media y alta. |
+| Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**. El principal redacta las specs y puede delegar la indexación, el análisis acotado y la investigación compleja a roles de solo lectura. Enter conserva la activación actual. En un proyecto nuevo empieza desactivada. |
 
 Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Modelo y esfuerzo se preguntan en cada ejecución. Abre una sesión nueva para cargarlos.
 
-**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Tras elegir el agente, el instalador solo pregunta la ejecución de pasos; los roles Auto model siguen siendo exclusivos de Codex y Claude Code. Adaptive crea el ejecutor Easy del cliente (`.github/agents/litespec-easy.agent.md`, o `litespec-easy.md` en `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` o `.qwen/agents/`) y `litespec-shared/adaptive-active.md`, un marcador que nombra al cliente e indica cómo invocar al ejecutor; los demás clientes lo ignoran. En Gemini CLI, Enter elige el alias `flash` y `inherit` usa el modelo de la sesión. En los demás clientes, dejar el modelo vacío conserva el predeterminado del cliente (OpenCode usa `proveedor/modelo`; Copilot en VS Code usa nombres como `Claude Sonnet 4.5 (copilot)` y Copilot CLI IDs como `claude-sonnet-4.5`). Clásico borra ambos archivos. Aún sin validar en clientes ni entornos reales (Copilot en VS Code o CLI): puede ser necesario habilitar la delegación en el cliente, y cualquier cliente puede ignorar o reemplazar el modelo pedido.
+**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Estos clientes ofrecen un ejecutor Easy y el marcador `litespec-shared/adaptive-active.md` indica qué cliente lo invoca. Clásico elimina el ejecutor y el marcador. Enter elige `flash` en Gemini CLI, `composer-2.5[]` en Cursor y `anthropic/claude-haiku-4-5` en OpenCode con un proveedor Anthropic disponible. En GitHub Copilot y Qwen Code, Enter usa el modelo del cliente. En Cursor, OpenCode y Gemini CLI, escribe `inherit` para usar el modelo de la sesión. Copilot usa el nombre visible en VS Code y el identificador en Copilot CLI. La disponibilidad de modelos y la delegación dependen del cliente.
 
-Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive asigna dificultad residual, responsable y revisión focalizada cuando corresponde. Apply completa las fases pendientes si se invoca directamente y despacha un paso Easy delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
+Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive asigna dificultad residual, responsable y revisión focalizada cuando corresponde. Apply completa las fases pendientes si se invoca directamente y despacha un paso delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
 
 Para comparar los modos, parte de la misma revisión con los mismos requisitos, controles y configuración de roles. Cuenta desde Explore hasta la aceptación final. Compara cuota del principal por cambio aceptado, tiempo, correcciones y regresiones. Cada paso Adaptive registra `Executed:` (executor, principal o executor-then-principal) y su número de correcciones. Si el cliente oculta el consumo por modelo, deja ese dato como desconocido.
 
@@ -156,13 +156,21 @@ Para comparar los modos, parte de la misma revisión con los mismos requisitos, 
 
 ### Reconfigurar perfiles
 
-En la instalación, Enter acepta el modelo que aparece junto a cada rol. Para `search`, LiteSpec propone `gpt-6-luna` en Codex y `haiku` en Claude Code. Para `plan`, propone `gpt-6.2-astra` y `sonnet`. Para `easy`, propone `gpt-6.2-sol` y `sonnet`.
+En la instalación, Enter acepta el modelo que aparece junto a cada perfil.
 
-El esfuerzo predeterminado de los tres roles es `medium`. Puedes escribir otro nivel compatible, como `high`, o `inherit` para dejar que el cliente resuelva el esfuerzo. También puedes escribir `inherit` en el campo de modelo para usar el de la sesión. En Claude Code, la versión de `haiku` y `sonnet` depende del proveedor.
+| Modo y perfil | Codex | Claude Code |
+|---|---|---|
+| Adaptive · Muy fácil (`very-easy`) | `gpt-6-luna` | `haiku` |
+| Adaptive · Fácil (`easy`) | `gpt-6.2-sol` | `sonnet` |
+| Auto model · Indexación (`search`) | `gpt-6-luna` | `haiku` |
+| Auto model · Análisis acotado (`plan`) | `gpt-6.2-sol` | `sonnet` |
+| Auto model · Investigación compleja (`research`) | `gpt-6.2-astra` | `opus` |
 
-Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, bórralo. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
+Para la sesión principal, el instalador sugiere Sol o Sonnet en pasos de dificultad media y Astra u Opus en los difíciles y en la redacción final. Elige el modelo principal en el cliente. Cada perfil tiene esfuerzo predeterminado `medium`. Puedes escribir otro nivel compatible, como `high`, o `inherit` en cualquiera de los dos campos para que el cliente resuelva el modelo o el esfuerzo. Las versiones detrás de los alias de Claude Code dependen del proveedor.
 
-Para cambiar de modo, ejecuta el instalador para el mismo cliente. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera. Después abre una sesión nueva.
+Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. Para desactivar Adaptive manualmente en Codex o Claude Code, borra los perfiles `litespec-easy` y `litespec-very-easy`. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
+
+Para cambiar de modo, ejecuta el instalador para el mismo cliente. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los perfiles que enumera. Después abre una sesión nueva.
 
 ## Numeración de versiones
 

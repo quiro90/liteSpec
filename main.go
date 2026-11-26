@@ -14,7 +14,7 @@ import (
 //go:embed lite.spec.steps/litespec-*/SKILL.md lite.spec.steps/litespec-shared/*.md
 var packageFiles embed.FS
 
-var version = "v0.1.2"
+var version = "v0.1.3"
 
 const usage = "litespec [init [--project <path>] [--lang es|en] [--plain]] | litespec --version"
 
@@ -68,7 +68,7 @@ func run(args []string, input io.Reader, out io.Writer, executable string) error
 		fmt.Fprint(out, "\x1b[2J\x1b[H")
 		menu.opening = true
 		if *lang == "" {
-			choice, err := menu.choose("Idioma / Language", "", []string{"Español", "English"}, 0, "")
+			choice, err := menu.choose("Idioma / Language", "", "", []string{"Español", "English"}, 0, "")
 			if err != nil {
 				return err
 			}

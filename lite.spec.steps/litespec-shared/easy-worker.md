@@ -1,4 +1,4 @@
-# Assigned Easy step
+# Assigned Very Easy or Easy step
 
 Read applicable AGENTS.md, the assigned step and the sources it references. Follow the parent's authorized scope, preserve existing edits and use the agreed acceptance. The parent owns LiteSpec records and delegation.
 

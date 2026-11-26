@@ -19,17 +19,28 @@ type agent struct {
 	invocation string
 	modelField string
 	easyModel  string
+	models     nativeModels
+}
+
+type nativeModels struct {
+	light, standard, advanced string
 }
 
 var agents = []agent{
-	{name: "Codex", skills: ".agents/skills", profiles: ".codex/agents", native: "codex"},
-	{name: "Claude Code", skills: ".claude/skills", profiles: ".claude/agents", native: "claude"},
+	{
+		name: "Codex", skills: ".agents/skills", profiles: ".codex/agents", native: "codex",
+		models: nativeModels{light: "gpt-6-luna", standard: "gpt-6.2-sol", advanced: "gpt-6.2-astra"},
+	},
+	{
+		name: "Claude Code", skills: ".claude/skills", profiles: ".claude/agents", native: "claude",
+		models: nativeModels{light: "haiku", standard: "sonnet", advanced: "opus"},
+	},
 	{
 		name: "GitHub Copilot", skills: ".github/skills", profiles: ".github/agents", easyFile: "litespec-easy.agent.md",
 		invocation: "through the native subagent or custom-agent delegation of the current surface (VS Code, Copilot CLI or other)",
 	},
-	{name: "Cursor", skills: ".cursor/skills", profiles: ".cursor/agents", invocation: "through native subagent delegation"},
-	{name: "OpenCode", skills: ".opencode/skills", profiles: ".opencode/agents", invocation: "through native subagent delegation", modelField: "mode: subagent\n"},
+	{name: "Cursor", skills: ".cursor/skills", profiles: ".cursor/agents", invocation: "through native subagent delegation", easyModel: "composer-2.5[]"},
+	{name: "OpenCode", skills: ".opencode/skills", profiles: ".opencode/agents", invocation: "through native subagent delegation", modelField: "mode: subagent\n", easyModel: "anthropic/claude-haiku-4-5"},
 	{name: "Qoder CLI", skills: ".qoder/skills"},
 	{name: "Gemini CLI", skills: ".gemini/skills", profiles: ".gemini/agents", invocation: "through its native subagent tool", modelField: "kind: local\n", easyModel: "flash"},
 	{name: "Qwen Code", skills: ".qwen/skills", profiles: ".qwen/agents", invocation: "through native subagent delegation"},
@@ -49,9 +60,11 @@ var experimentalModelIDs = map[string]*regexp.Regexp{
 }
 
 var roleDescriptions = map[string]string{
-	"easy":   "Execute only the Easy step explicitly assigned by the LiteSpec parent.",
-	"search": "Gather concrete evidence with paths and lines; do not edit or decide scope.",
-	"plan":   "Analyze evidence and return a proposal; do not edit or implement.",
+	"very-easy": "Execute only the Very Easy step explicitly assigned by the LiteSpec parent.",
+	"easy":      "Execute only the Easy step explicitly assigned by the LiteSpec parent.",
+	"search":    "Index relevant files and locate references with paths and lines; do not edit or decide scope.",
+	"plan":      "Analyze available evidence and return a bounded proposal; do not edit or implement.",
+	"research":  "Investigate a complex technical question and return evidence, tradeoffs and uncertainties; do not edit or implement.",
 }
 
 type fileChange struct {
@@ -70,8 +83,23 @@ func (a agent) configure(root *os.Root, menu terminal) (string, []fileChange, er
 		return classic, nil, nil
 	}
 	modeLabel := menu.text("Adaptive experimental", "Experimental Adaptive")
-	mode, err := menu.choose(menu.text("Ejecución de pasos", "Step execution"), menu.text("Modo [1]", "Mode [1]"),
-		[]string{classic, modeLabel + menu.text(" · Delegar pasos Easy", " · Delegate Easy steps")}, 0,
+	adaptiveHelp := menu.text(
+		"Adaptive agrupa los pasos de la spec por impacto y complejidad.\nEl principal puede delegar a modelos más livianos y verifica el resultado.",
+		"Adaptive groups spec steps by impact and complexity.\nThe parent can delegate to lighter models and verifies the result.",
+	)
+	delegateLabel := menu.text(" · Delegar pasos Easy", " · Delegate Easy steps")
+	switch {
+	case a.native != "":
+		delegateLabel = menu.text(" · Delegar pasos simples", " · Delegate simple steps")
+		adaptiveHelp += fmt.Sprintf(menu.text(
+			"\nEjecutores · Muy fácil %s / Fácil %s\nPrincipal sugerido · Media %s / Difícil %s",
+			"\nWorkers · Very Easy %s / Easy %s\nSuggested parent · Medium %s / Hard %s",
+		), a.models.light, a.models.standard, a.models.standard, a.models.advanced)
+	case a.easyModel != "":
+		adaptiveHelp += fmt.Sprintf(menu.text("\nEasy · Modelo predeterminado %s", "\nEasy · Default model %s"), a.easyModel)
+	}
+	mode, err := menu.choose(menu.text("Ejecución de pasos", "Step execution"), adaptiveHelp, menu.text("Modo [1]", "Mode [1]"),
+		[]string{classic, modeLabel + delegateLabel}, 0,
 		menu.text("modo inválido", "invalid mode"))
 	if err != nil {
 		return "", nil, err
@@ -94,7 +122,11 @@ func (a agent) configure(root *os.Root, menu terminal) (string, []fileChange, er
 	if info != nil {
 		defaultRoles = 1
 	}
-	roles, err := menu.choose(menu.text("Delegación interna de las skills", "Internal skill delegation"),
+	roleHelp := fmt.Sprintf(menu.text(
+		"Auto model es para cuando el agente principal genera las specs.\nIndexación · %s   Análisis acotado · %s\nInvestigación compleja · %s\nRedacción final · %s sugerido para el principal",
+		"Auto model is for when the parent agent generates the specs.\nIndexing · %s   Bounded analysis · %s\nComplex research · %s\nFinal drafting · %s suggested for the parent",
+	), a.models.light, a.models.standard, a.models.advanced, a.models.advanced)
+	roles, err := menu.choose(menu.text("Delegación interna de las skills", "Internal skill delegation"), roleHelp,
 		fmt.Sprintf("Roles [%d]", defaultRoles+1),
 		[]string{menu.text("Desactivada", "Disabled"), menu.text("Auto model por rol", "Auto model by role")},
 		defaultRoles, menu.text("opción de roles inválida", "invalid role option"))
@@ -119,42 +151,30 @@ func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive b
 	}
 	const defaultEffort = "medium"
 	roleModels := [...]struct {
-		role, codex, claude string
+		role, label, model string
+		enabled            bool
 	}{
-		{"search", "gpt-6-luna", "haiku"},
-		{"plan", "gpt-6.2-astra", "sonnet"},
-		{"easy", "gpt-6.2-sol", "sonnet"},
+		{"search", menu.text("Indexación", "Indexing"), a.models.light, autoModel},
+		{"plan", menu.text("Análisis acotado", "Bounded analysis"), a.models.standard, autoModel},
+		{"research", menu.text("Investigación compleja", "Complex research"), a.models.advanced, autoModel},
+		{"very-easy", menu.text("Muy fácil · Ejecución", "Very Easy · Execution"), a.models.light, adaptive},
+		{"easy", menu.text("Fácil · Ejecución", "Easy · Execution"), a.models.standard, adaptive},
 	}
-	changes := make([]fileChange, 0, 4)
+	changes := make([]fileChange, 0, len(roleModels)+1)
 	if !autoModel {
 		changes = append(changes, fileChange{name: marker, remove: true})
 	}
-	for _, defaults := range roleModels {
-		role := defaults.role
-		if role == "easy" && autoModel {
-			content := fmt.Sprintf("Native delegation active.\nAdapter: %s. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: %s/litespec-{search,plan}.%s. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization.\n", a.native, a.profiles, extension)
-			changes = append(changes, writeChange(marker, content))
-		}
+	for _, profile := range roleModels {
+		role := profile.role
 		name := path.Join(a.profiles, "litespec-"+role+"."+extension)
-		enabled := autoModel
-		if role == "easy" {
-			enabled = adaptive
-		}
-		if !enabled {
+		if !profile.enabled {
 			changes = append(changes, fileChange{name: name, remove: true})
 			continue
 		}
 
-		modelDefault := defaults.claude
-		if codex {
-			modelDefault = defaults.codex
-		}
-		model, err := menu.ask(fmt.Sprintf(menu.text("%s - modelo [predeterminado: %s]", "%s - model [default: %s]"), role, modelDefault))
+		model, err := menu.askModel(profile.label+menu.text(" - modelo", " - model"), profile.model)
 		if err != nil {
 			return nil, err
-		}
-		if model == "" {
-			model = modelDefault
 		}
 		if !modelPattern.MatchString(model) {
 			return nil, errors.New(menu.text("identificador de modelo inválido", "invalid model identifier"))
@@ -163,7 +183,7 @@ func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive b
 			model = ""
 		}
 
-		effort, err := menu.ask(fmt.Sprintf(menu.text("%s - esfuerzo opcional [predeterminado: %s]", "%s - optional effort [default: %s]"), role, defaultEffort))
+		effort, err := menu.ask(fmt.Sprintf(menu.text("%s - esfuerzo opcional [Enter = %s]", "%s - optional effort [Enter = %s]"), profile.label, defaultEffort))
 		if err != nil {
 			return nil, err
 		}
@@ -178,11 +198,15 @@ func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive b
 		}
 		changes = append(changes, writeChange(name, a.nativeProfile(role, model, effort)))
 	}
+	if autoModel {
+		content := fmt.Sprintf("Native delegation active.\nAdapter: %s. Use litespec-search, litespec-plan and litespec-research when useful under delegation.md. Native definitions: %s/litespec-{search,plan,research}.%s. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization.\n", a.native, a.profiles, extension)
+		changes = append(changes, writeChange(marker, content))
+	}
 	return changes, nil
 }
 
 func (a agent) instructions(role string) string {
-	if role == "easy" {
+	if role == "easy" || role == "very-easy" {
 		return fmt.Sprintf("Follow %s/litespec-shared/easy-worker.md for the assigned step. Do not delegate.", a.skills)
 	}
 	return fmt.Sprintf("%s Read applicable AGENTS.md and %s/litespec-shared/protocol.md. Do not delegate. Respect parent authorization and existing edits. Parent owns LiteSpec records and Archive. Return evidence, checks, uncertainty and pending work.", roleDescriptions[role], a.skills)
@@ -208,7 +232,7 @@ func (a agent) nativeProfile(role, model, effort string) string {
 	if effort != "" {
 		fmt.Fprintf(&profile, "effort: %s\n", effort)
 	}
-	if role != "easy" {
+	if role != "easy" && role != "very-easy" {
 		profile.WriteString("tools: Read, Grep, Glob\n")
 	}
 	fmt.Fprintf(&profile, "---\n\n%s\n", a.instructions(role))
@@ -232,16 +256,12 @@ func (a agent) experimentalChanges(menu terminal, adaptive bool) ([]fileChange, 
 			"VS Code uses the model's display name. Copilot CLI uses its identifier.",
 		))
 	}
-	prompt := menu.text("easy - modelo [vacío = predeterminado del cliente]", "easy - model [blank = client default]")
-	if a.easyModel != "" {
-		prompt = fmt.Sprintf(menu.text("easy - modelo [predeterminado: %s]", "easy - model [default: %s]"), a.easyModel)
-	}
-	model, err := menu.ask(prompt)
+	model, err := menu.askModel(menu.text("Easy - modelo", "Easy - model"), a.easyModel)
 	if err != nil {
 		return nil, err
 	}
-	if model == "" {
-		model = a.easyModel
+	if strings.EqualFold(model, "inherit") && a.name == "OpenCode" {
+		model = ""
 	}
 	pattern := experimentalModelIDs[a.name]
 	if pattern == nil {

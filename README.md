@@ -66,7 +66,7 @@ GitHub Actions runs `go test` and `go vet` on Windows, macOS, and Linux. Once al
 
 ## Workflow
 
-The installer offers **Classic** for all agents and **Experimental Adaptive** for Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code. Adaptive is still in early testing across all supported clients. In both modes a step delivers a verifiable outcome. In Adaptive the parent can assign an Easy implementation step to Sonnet or Sol, then resume control for verification. [Installer options](#choosing-execution-mode)
+The installer offers **Classic** for all agents and **Experimental Adaptive** for Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code. Adaptive is still in early testing across all supported clients. In both modes a step delivers a verifiable outcome. In Adaptive the parent groups steps by impact and complexity, delegates eligible steps to lighter models and verifies the results. [Installer options](#choosing-execution-mode)
 
 1. **Explore:** inspect relevant context and confirm the goal and scope.
 2. **Propose:** prepare `spec.md` as an index and steps with context, tasks, and checks. A small change can use a single file.
@@ -141,14 +141,14 @@ Codex and Claude Code offer two independent choices after agent selection.
 
 | Setting | Options |
 |---|---|
-| Step execution | **1 Classic** (Enter) or **2 Experimental Adaptive**. In Adaptive, Easy uses the configurable `litespec-easy` profile. Enter when creating it selects `gpt-6.2-sol` in Codex or `sonnet` in Claude. |
-| Internal skill delegation | **1 Disabled** or **2 Auto model by role**: read-only `search` and `plan` roles for analysis in any phase. Enter keeps the current role activation, initially disabled in a new project. |
+| Step execution | **1 Classic** (Enter) or **2 Experimental Adaptive**. In Adaptive, eligible Very Easy and Easy steps can go to their own workers. The parent handles Medium and Hard steps. |
+| Internal skill delegation | **1 Disabled** or **2 Auto model by role**. The parent drafts the specs and can delegate indexing, bounded analysis and complex research to read-only roles. Enter keeps the current role activation, initially disabled in a new project. |
 
 Qoder CLI, Cline, Devin Local, ADE, Zed and MiniMax Code use Classic. Each installer run regenerates the configuration files for the chosen options and deletes those no longer selected; it touches only those exact files, so manual edits to them are replaced and other agents are preserved. Model and effort are asked on each run. Start a new client session to load them.
 
-**Experimental Adaptive (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** After agent selection the installer asks only for step execution; Auto model roles remain exclusive to Codex and Claude Code. Adaptive creates the client's Easy worker (`.github/agents/litespec-easy.agent.md`, or `litespec-easy.md` in `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` or `.qwen/agents/`) and `litespec-shared/adaptive-active.md`, a marker that names the client and how to invoke the worker; other clients ignore it. In Gemini CLI, Enter selects the `flash` alias and `inherit` uses the session model. For the other clients, leaving the model blank keeps the client default (OpenCode uses `provider/model`; Copilot in VS Code uses names such as `Claude Sonnet 4.5 (copilot)` and Copilot CLI IDs such as `claude-sonnet-4.5`). Classic deletes both files. Not yet validated in real clients or surfaces (Copilot in VS Code or CLI): delegation may need to be enabled in the client, and any client may ignore or override the requested model.
+**Experimental Adaptive (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** These clients offer an Easy worker and use the client named in `litespec-shared/adaptive-active.md` to invoke it. Classic removes the worker and marker. Enter selects `flash` in Gemini CLI, `composer-2.5[]` in Cursor and `anthropic/claude-haiku-4-5` in OpenCode with an Anthropic provider available. Enter uses the client model in GitHub Copilot and Qwen Code. In Cursor, OpenCode and Gemini CLI, enter `inherit` to use the session model. Copilot uses display names in VS Code and model IDs in Copilot CLI. Model availability and delegation depend on the client.
 
-Explore records contracts, patterns and acceptance examples. Propose groups code, tests and documentation by delivered outcome. In Adaptive it assigns residual difficulty, ownership and focused review where needed. Direct Apply fills missing phases and dispatches one eligible Easy step at a time. Standalone Verify checks scope, current evidence and risk boundaries.
+Explore records contracts, patterns and acceptance examples. Propose groups code, tests and documentation by delivered outcome. In Adaptive it assigns residual difficulty, ownership and focused review where needed. Direct Apply fills missing phases and dispatches one eligible step at a time. Standalone Verify checks scope, current evidence and risk boundaries.
 
 To compare modes, start at the same revision with the same requirements, checks and role settings. Measure from Explore through final acceptance. Compare parent quota per accepted change, elapsed time, corrections and regressions. Each Adaptive step records `Executed:` (executor, principal or executor-then-principal) and its correction count. Record per-model usage as unknown when the client does not expose it.
 
@@ -156,13 +156,21 @@ To compare modes, start at the same revision with the same requirements, checks 
 
 ### Reconfigure profiles
 
-During installation, Enter accepts the model shown next to each role. For `search`, LiteSpec suggests `gpt-6-luna` in Codex and `haiku` in Claude Code. For `plan`, it suggests `gpt-6.2-astra` and `sonnet`. For `easy`, it suggests `gpt-6.2-sol` and `sonnet`.
+During installation, Enter accepts the model shown next to each profile.
 
-All three roles default to `medium` effort. You can enter another supported level such as `high`, or `inherit` to let the client resolve effort. You can also enter `inherit` in the model field to use the session's model. In Claude Code, the versions behind `haiku` and `sonnet` depend on the provider.
+| Mode and profile | Codex | Claude Code |
+|---|---|---|
+| Adaptive · Very Easy (`very-easy`) | `gpt-6-luna` | `haiku` |
+| Adaptive · Easy (`easy`) | `gpt-6.2-sol` | `sonnet` |
+| Auto model · Indexing (`search`) | `gpt-6-luna` | `haiku` |
+| Auto model · Bounded analysis (`plan`) | `gpt-6.2-sol` | `sonnet` |
+| Auto model · Complex research (`research`) | `gpt-6.2-astra` | `opus` |
 
-Edit each role profile in `.codex/agents/` or `.claude/agents/`. Set `model` and a compatible `model_reasoning_effort` (Codex) or `effort` (Claude). Omitted fields use client defaults. Claude also accepts `model: inherit`. The Adaptive `litespec-easy` profile uses the same fields; to disable Adaptive manually, delete it. Rerunning the installer regenerates these profiles and replaces manual edits.
+For the parent session, the installer suggests Sol or Sonnet for Medium steps and Astra or Opus for Hard steps and final drafting. Select the parent model in the client. Each profile defaults to `medium` effort. Enter another supported level such as `high`, or use `inherit` in either field to let the client choose the model or effort. Claude Code model alias versions depend on the provider.
 
-To switch modes, rerun the installer for the same client. To disable roles manually, delete the installed `litespec-shared/delegation-active.md` marker and the two profiles it lists. Then open a new session.
+Edit each role profile in `.codex/agents/` or `.claude/agents/`. Set `model` and a compatible `model_reasoning_effort` (Codex) or `effort` (Claude). Omitted fields use client defaults. Claude also accepts `model: inherit`. To disable Adaptive manually in Codex or Claude Code, delete the `litespec-easy` and `litespec-very-easy` profiles. Rerunning the installer regenerates these profiles and replaces manual edits.
+
+To switch modes, rerun the installer for the same client. To disable roles manually, delete the installed `litespec-shared/delegation-active.md` marker and the profiles it lists. Then open a new session.
 
 ## Version numbering
 

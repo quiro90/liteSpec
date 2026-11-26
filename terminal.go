@@ -92,7 +92,7 @@ func (menu terminal) form(field huh.Field) error {
 	theme := huh.ThemeBase()
 	theme.Focused.Base = menu.renderer.NewStyle().PaddingLeft(2)
 	theme.Focused.Title = menu.renderer.NewStyle().Bold(true)
-	theme.Focused.Description = menu.renderer.NewStyle().Faint(true)
+	theme.Focused.Description = menu.renderer.NewStyle().Foreground(lipgloss.Color("#808080"))
 	theme.Focused.SelectSelector = menu.accent().SetString("› ")
 	theme.Focused.MultiSelectSelector = theme.Focused.SelectSelector
 	theme.Focused.SelectedPrefix = menu.accent().SetString("[✓] ")
@@ -163,21 +163,32 @@ func (screen *openingForm) View() string {
 	return screen.header(diamond) + screen.form.View()
 }
 
-func (menu terminal) choose(title, prompt string, options []string, selected int, invalid string) (int, error) {
+func (menu terminal) choose(title, description, prompt string, options []string, selected int, invalid string) (int, error) {
 	if menu.interactive {
 		items := make([]huh.Option[int], len(options))
 		for i, label := range options {
 			items[i] = huh.NewOption(label, i)
 		}
 		choice := max(0, selected)
-		field := huh.NewSelect[int]().Title(title).Description(menu.text(
+		keys := menu.text(
 			"↑ ↓ Moverse    Enter Elegir    Esc Cancelar",
 			"↑ ↓ Move    Enter Choose    Esc Cancel",
-		)).Options(items...).Value(&choice).Filtering(false).Height(menu.optionsHeight(len(options)))
+		)
+		if description != "" {
+			description += "\n"
+		}
+		field := huh.NewSelect[int]().Title(title).Description(description + keys).
+			Options(items...).Value(&choice).Filtering(false)
+		if description == "" {
+			field.Height(menu.optionsHeight(len(options)))
+		}
 		err := menu.form(field)
 		return choice, err
 	}
 	fmt.Fprintln(menu.out, title)
+	if description != "" {
+		fmt.Fprintln(menu.out, description)
+	}
 	for i, option := range options {
 		fmt.Fprintf(menu.out, "%2d) %s\n", i+1, option)
 	}
@@ -193,6 +204,18 @@ func (menu terminal) choose(title, prompt string, options []string, selected int
 		return 0, errors.New(invalid)
 	}
 	return index - 1, nil
+}
+
+func (menu terminal) askModel(label, defaultModel string) (string, error) {
+	hint := menu.text("Enter = modelo del cliente", "Enter = client model")
+	if defaultModel != "" {
+		hint = "Enter = " + defaultModel
+	}
+	model, err := menu.ask(fmt.Sprintf("%s [%s]", label, hint))
+	if model == "" {
+		model = defaultModel
+	}
+	return model, err
 }
 
 func (menu terminal) optionsHeight(count int) int {

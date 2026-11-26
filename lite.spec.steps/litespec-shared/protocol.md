@@ -2,7 +2,7 @@
 
 Read rules once per context; reread only if changed or unavailable. Load only required references. Use available tools.
 
-Assigned workers: follow the parent assignment and applicable AGENTS.md. For an Easy implementation step use the [worker instructions](easy-worker.md). Stop reading this protocol here.
+Assigned workers: follow the parent assignment and applicable AGENTS.md. For a Very Easy or Easy implementation step use the [worker instructions](easy-worker.md). Stop reading this protocol here.
 
 Parent sessions: if the project directory `.litespec/serial/` exists, acquire the [single-change claim](serial.md) before proceeding.
 

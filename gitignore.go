@@ -58,7 +58,7 @@ func askGitignore(root *os.Root, menu terminal, destinations, folders []string, 
 	var choice int
 	if menu.interactive {
 		var err error
-		choice, err = menu.choose(menu.text("Actualizar .gitignore", "Update .gitignore"), "", options, 0, "")
+		choice, err = menu.choose(menu.text("Actualizar .gitignore", "Update .gitignore"), "", "", options, 0, "")
 		if err != nil {
 			return nil, err
 		}

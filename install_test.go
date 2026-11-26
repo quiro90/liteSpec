@@ -151,7 +151,8 @@ func TestNumberedEnglishInstaller(t *testing.T) {
 	}
 	for _, message := range []string{"First installation in this project.", "Classic / Experimental Adaptive",
 		"Step execution", "Experimental Adaptive · Delegate Easy steps", "Internal skill delegation",
-		"easy - model", "Agent: Codex | Mode: Experimental Adaptive", "7 rules added."} {
+		"easy - model [default: gpt-6.2-sol]", "easy - optional effort [default: medium]",
+		"Agent: Codex | Mode: Experimental Adaptive", "7 rules added."} {
 		if !strings.Contains(output.String(), message) {
 			t.Errorf("missing %q in output:\n%s", message, output.String())
 		}
@@ -261,6 +262,41 @@ func TestInstallsMultipleAgentsWithOneGitignorePrompt(t *testing.T) {
 	}
 }
 
+func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
+	project := t.TempDir()
+	output := invoke(t, project, "", "1,2\n2\n2\n\n\n\n\n\n\n2\n2\n\n\n\n\n\n\n")
+	for _, profile := range []struct {
+		file, model, effort string
+	}{
+		{".codex/agents/litespec-search.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
+		{".codex/agents/litespec-plan.toml", `model = "gpt-6.2-astra"`, `model_reasoning_effort = "medium"`},
+		{".codex/agents/litespec-easy.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
+		{".claude/agents/litespec-search.md", "model: 'haiku'", "effort: medium"},
+		{".claude/agents/litespec-plan.md", "model: 'sonnet'", "effort: medium"},
+		{".claude/agents/litespec-easy.md", "model: 'sonnet'", "effort: medium"},
+	} {
+		content := readProject(t, project, profile.file)
+		if !strings.Contains(content, profile.model) || !strings.Contains(content, profile.effort) {
+			t.Errorf("incorrect defaults for %s:\n%s", profile.file, content)
+		}
+	}
+	if !strings.Contains(output, "search - modelo [predeterminado: gpt-6-luna]") ||
+		!strings.Contains(output, "search - esfuerzo opcional [predeterminado: medium]") {
+		t.Fatalf("expected localized model and effort defaults:\n%s", output)
+	}
+
+	invoke(t, project, "", "1,2\n2\n1\ninherit\ninherit\n2\n1\nsonnet[1m]\nHIGH\n")
+	codex := readProject(t, project, ".codex/agents/litespec-easy.toml")
+	if strings.Contains(codex, "\nmodel =") || strings.Contains(codex, "\nmodel_reasoning_effort =") {
+		t.Errorf("expected Codex to inherit both settings:\n%s", codex)
+	}
+
+	claude := readProject(t, project, ".claude/agents/litespec-easy.md")
+	if !strings.Contains(claude, "model: 'sonnet[1m]'") || !strings.Contains(claude, "effort: high") {
+		t.Errorf("expected the model and effort overrides in Claude Code:\n%s", claude)
+	}
+}
+
 func TestNativeProfilesAndReconfiguration(t *testing.T) {
 	for _, test := range []struct {
 		choice, destination, profileDir, extension, model, effort string
@@ -340,8 +376,13 @@ func TestExperimentalProfiles(t *testing.T) {
 			if !strings.Contains(active, "Client: "+test.client+".") || !strings.Contains(active, worker) {
 				t.Fatal(active)
 			}
-			invoke(t, project, "", test.choice+"\n2\n\n")
-			if strings.Contains(readProject(t, project, worker), "model:") {
+			output := invoke(t, project, "", test.choice+"\n2\n\n")
+			profile = readProject(t, project, worker)
+			if test.client == "Gemini CLI" {
+				if !strings.Contains(output, "[predeterminado: flash]") || !strings.Contains(profile, "model: 'flash'") {
+					t.Fatalf("expected the Gemini Flash default:\n%s\n%s", output, profile)
+				}
+			} else if strings.Contains(profile, "model:") {
 				t.Fatal("empty model should use the client default")
 			}
 			invoke(t, project, "", test.choice+"\n1\n")

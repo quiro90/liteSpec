@@ -18,6 +18,7 @@ type agent struct {
 	easyFile   string
 	invocation string
 	modelField string
+	easyModel  string
 }
 
 var agents = []agent{
@@ -30,7 +31,7 @@ var agents = []agent{
 	{name: "Cursor", skills: ".cursor/skills", profiles: ".cursor/agents", invocation: "through native subagent delegation"},
 	{name: "OpenCode", skills: ".opencode/skills", profiles: ".opencode/agents", invocation: "through native subagent delegation", modelField: "mode: subagent\n"},
 	{name: "Qoder CLI", skills: ".qoder/skills"},
-	{name: "Gemini CLI", skills: ".gemini/skills", profiles: ".gemini/agents", invocation: "through its native subagent tool", modelField: "kind: local\n"},
+	{name: "Gemini CLI", skills: ".gemini/skills", profiles: ".gemini/agents", invocation: "through its native subagent tool", modelField: "kind: local\n", easyModel: "flash"},
 	{name: "Qwen Code", skills: ".qwen/skills", profiles: ".qwen/agents", invocation: "through native subagent delegation"},
 	{name: "Cline", skills: ".cline/skills"},
 	{name: "Devin Local", skills: ".devin/skills"},
@@ -40,6 +41,7 @@ var agents = []agent{
 }
 
 var modelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$`)
+var claudeModelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/@-]*(\[1m\])?$`)
 var experimentalModelIDs = map[string]*regexp.Regexp{
 	"GitHub Copilot": regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 ._:/()-]*$`),
 	"Cursor":         regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(\[([a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+(,[a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+)*)?\])?$`),
@@ -108,49 +110,70 @@ func (a agent) configure(root *os.Root, menu terminal) (string, []fileChange, er
 }
 
 func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive bool) ([]fileChange, error) {
-	extension, easyDefault := "md", "sonnet"
-	if a.native == "codex" {
-		extension, easyDefault = "toml", "gpt-6.2-sol"
+	codex := a.native == "codex"
+	extension, modelPattern := "md", claudeModelID
+	allowedEfforts := []string{"low", "medium", "high", "xhigh", "max"}
+	if codex {
+		extension, modelPattern = "toml", modelID
+		allowedEfforts = append(allowedEfforts, "none", "minimal", "ultra")
+	}
+	const defaultEffort = "medium"
+	roleModels := [...]struct {
+		role, codex, claude string
+	}{
+		{"search", "gpt-6-luna", "haiku"},
+		{"plan", "gpt-6.2-astra", "sonnet"},
+		{"easy", "gpt-6.2-sol", "sonnet"},
 	}
 	changes := make([]fileChange, 0, 4)
 	if !autoModel {
 		changes = append(changes, fileChange{name: marker, remove: true})
 	}
-	for _, role := range []string{"search", "plan", "easy"} {
+	for _, defaults := range roleModels {
+		role := defaults.role
 		if role == "easy" && autoModel {
 			content := fmt.Sprintf("Native delegation active.\nAdapter: %s. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: %s/litespec-{search,plan}.%s. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization.\n", a.native, a.profiles, extension)
 			changes = append(changes, writeChange(marker, content))
 		}
 		name := path.Join(a.profiles, "litespec-"+role+"."+extension)
-		enabled, modelDefault := autoModel, ""
+		enabled := autoModel
 		if role == "easy" {
-			enabled, modelDefault = adaptive, easyDefault
+			enabled = adaptive
 		}
 		if !enabled {
 			changes = append(changes, fileChange{name: name, remove: true})
 			continue
 		}
 
-		model, err := menu.ask(role + menu.text(" - modelo [", " - model [") + modelDefault + "]")
+		modelDefault := defaults.claude
+		if codex {
+			modelDefault = defaults.codex
+		}
+		model, err := menu.ask(fmt.Sprintf(menu.text("%s - modelo [predeterminado: %s]", "%s - model [default: %s]"), role, modelDefault))
 		if err != nil {
 			return nil, err
 		}
 		if model == "" {
 			model = modelDefault
 		}
-		if model != "" && !modelID.MatchString(model) {
+		if !modelPattern.MatchString(model) {
 			return nil, errors.New(menu.text("identificador de modelo inválido", "invalid model identifier"))
 		}
-		effort, err := menu.ask(role + menu.text(" - esfuerzo compatible", " - compatible effort"))
+		if codex && strings.EqualFold(model, "inherit") {
+			model = ""
+		}
+
+		effort, err := menu.ask(fmt.Sprintf(menu.text("%s - esfuerzo opcional [predeterminado: %s]", "%s - optional effort [default: %s]"), role, defaultEffort))
 		if err != nil {
 			return nil, err
 		}
 		effort = strings.ToLower(effort)
-		allowed := []string{"", "low", "medium", "high", "xhigh", "max"}
-		if a.native == "codex" {
-			allowed = append(allowed, "minimal", "ultra")
+		if effort == "" {
+			effort = defaultEffort
 		}
-		if !slices.Contains(allowed, effort) {
+		if effort == "inherit" {
+			effort = ""
+		} else if !slices.Contains(allowedEfforts, effort) {
 			return nil, errors.New(menu.text("esfuerzo inválido. La compatibilidad depende del modelo y cliente", "invalid effort. Compatibility depends on the model and client"))
 		}
 		changes = append(changes, writeChange(name, a.nativeProfile(role, model, effort)))
@@ -209,9 +232,16 @@ func (a agent) experimentalChanges(menu terminal, adaptive bool) ([]fileChange, 
 			"VS Code uses the model's display name. Copilot CLI uses its identifier.",
 		))
 	}
-	model, err := menu.ask(menu.text("easy - modelo [vacío = predeterminado del cliente]", "easy - model [blank = client default]"))
+	prompt := menu.text("easy - modelo [vacío = predeterminado del cliente]", "easy - model [blank = client default]")
+	if a.easyModel != "" {
+		prompt = fmt.Sprintf(menu.text("easy - modelo [predeterminado: %s]", "easy - model [default: %s]"), a.easyModel)
+	}
+	model, err := menu.ask(prompt)
 	if err != nil {
 		return nil, err
+	}
+	if model == "" {
+		model = a.easyModel
 	}
 	pattern := experimentalModelIDs[a.name]
 	if pattern == nil {

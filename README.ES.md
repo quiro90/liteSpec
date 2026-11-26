@@ -45,21 +45,21 @@ bash ./lite.spec.install.sh
 
 Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional. La instalación es local al proyecto:
 
-| Agente | Destino |
-|---|---|
-| [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` |
-| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` |
-| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` |
-| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` |
-| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` |
-| [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` |
-| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` |
-| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` |
-| [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` |
-| [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` |
-| [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` |
-| [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` |
-| MiniMax Code | `.minimax/skills/` |
+| Agente | Destino | Adaptativo |
+|---|---|:---:|
+| [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ |
+| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | — |
+| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | — |
+| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | — |
+| [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` | — |
+| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | — |
+| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | — |
+| [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` | — |
+| [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` | — |
+| [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` | — |
+| [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` | — |
+| MiniMax Code | `.minimax/skills/` | — |
 
 Zed Agent requiere un proyecto de confianza y comparte este destino con Codex. Auto model solo se aplica en el cliente indicado por su marcador; Zed mantiene el flujo normal y conserva la configuración de Codex. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
 

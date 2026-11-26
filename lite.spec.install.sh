@@ -148,11 +148,11 @@ main() {
         printf '%s\n' 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive - delegar pasos Easy'
         read -r -p 'Modo [1]: ' mode || return 1
         local role_mode=0 adaptive=0 enable default_model role_choice role_default=1
-        case "$mode" in ''|1) ;; 2) adaptive=1; mode_label=Adaptive ;; *) return 1 ;; esac
+        case "$mode" in ''|1) ;; 2) adaptive=1; mode_label=Adaptive ;; *) printf '%s\n' 'Modo invalido.' >&2; return 1 ;; esac
         printf '%s\n' 'Delegacion interna de las skills: 1) Desactivada  2) Auto model por rol'
         if [[ -f "$destination/litespec-shared/delegation-active.md" ]]; then role_default=2; fi
         read -r -p "Roles [$role_default]: " role_choice || return 1
-        case "${role_choice:-$role_default}" in 1) ;; 2) role_mode=1; mode_label+=' + Auto model' ;; *) return 1 ;; esac
+        case "${role_choice:-$role_default}" in 1) ;; 2) role_mode=1; mode_label+=' + Auto model' ;; *) printf '%s\n' 'Opcion de roles invalida.' >&2; return 1 ;; esac
         if [[ "$choice" == 1 ]]; then adapter=codex; extension=toml; else adapter=claude; extension=md; fi
         agent_root="$project_root/.$adapter/agents"
         disabled_root="$data_root/disabled-agents/$adapter"

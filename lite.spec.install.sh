@@ -96,7 +96,7 @@ main() {
         fi
     done
     printf 'LiteSpec - proyecto: %s\n' "$project_root"
-    printf '%s\n' '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
+    printf '%s\n' '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot [Clasico/Adaptive exp.]  4) Cursor [Clasico/Adaptive exp.]  5) OpenCode [Clasico/Adaptive exp.]  6) Qoder CLI  7) Gemini CLI [Clasico/Adaptive exp.]  8) Qwen Code [Clasico/Adaptive exp.]  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
     read -r -p 'Agente [1-13]: ' choice || return 1
     case "$choice" in
         1) relative=.agents/skills ;;
@@ -248,6 +248,95 @@ main() {
                     if [[ "$role" != easy ]]; then content+=$'tools: Read, Grep, Glob\n'; fi
                     content+=$'---\n\n'"$instructions"$'\n'
                 fi
+            fi
+            native_paths+=("$active")
+            native_sources+=('')
+            native_contents+=("$content")
+        done
+    elif [[ "$choice" == 3 || "$choice" == 4 || "$choice" == 5 || "$choice" == 7 || "$choice" == 8 ]]; then
+        # Experimental Adaptive for other clients: an Easy worker plus a marker naming this client.
+        # Codex and Claude Code keep their own branch above, unchanged.
+        local agent_dir easy_file invoke pattern target adaptive=0
+        local targets=()
+        printf '%s\n' 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive experimental - delegar pasos Easy'
+        read -r -p 'Modo [1]: ' mode || return 1
+        case "$mode" in ''|1) ;; 2) adaptive=1; mode_label='Adaptive experimental' ;; *) printf '%s\n' 'Modo invalido.' >&2; return 1 ;; esac
+        easy_file=litespec-easy.md
+        case "$choice" in
+            3) adapter=copilot; agent_dir=.github/agents; easy_file=litespec-easy.agent.md
+               invoke='through the native subagent or custom-agent delegation of the current surface (VS Code, Copilot CLI or other)' ;;
+            4) adapter=cursor; agent_dir=.cursor/agents; invoke='through native subagent delegation' ;;
+            5) adapter=opencode; agent_dir=.opencode/agents; invoke='through native subagent delegation' ;;
+            7) adapter=gemini; agent_dir=.gemini/agents; invoke='through its native subagent tool' ;;
+            8) adapter=qwen; agent_dir=.qwen/agents; invoke='through native subagent delegation' ;;
+        esac
+        agent_root="$project_root/$agent_dir"
+        disabled_root="$data_root/disabled-agents/$adapter"
+        # Install the worker before the marker; remove the marker before the worker.
+        if [[ "$adaptive" == 1 ]]; then targets=(easy marker); else targets=(marker easy); fi
+        for target in "${targets[@]}"; do
+            if [[ "$target" == easy ]]; then
+                name=$easy_file
+                active="$agent_root/$name"
+            else
+                name=adaptive-active.md
+                active="$destination/litespec-shared/$name"
+            fi
+            if [[ "$adaptive" != 1 && ! -e "$active" && ! -L "$active" ]]; then
+                continue
+            fi
+            saved="$disabled_root/$name"
+            for path in "$active" "$saved"; do
+                assert_local_path "$path"
+                if [[ -e "$path" && ! -f "$path" ]]; then
+                    printf 'No es un archivo: %s\n' "$path" >&2
+                    return 1
+                fi
+            done
+            if [[ -e "$active" && -e "$saved" ]]; then
+                printf 'Existen ambas configuraciones: %s y %s. Revisa cual conservar.\n' "$active" "$saved" >&2
+                return 1
+            fi
+            if [[ "$adaptive" != 1 ]]; then
+                if [[ -e "$active" ]]; then
+                    native_paths+=("$saved")
+                    native_sources+=("$active")
+                    native_contents+=('')
+                fi
+                continue
+            fi
+            if [[ -e "$active" ]]; then
+                preserved=$((preserved+1))
+                printf 'Se conserva: %s\n' "$active"
+                continue
+            fi
+            if [[ -e "$saved" ]]; then
+                native_paths+=("$active")
+                native_sources+=("$saved")
+                native_contents+=('')
+                continue
+            fi
+            if [[ "$target" == marker ]]; then
+                content="# Experimental - Adaptive execution enabled"$'\n'"Client: $agent_name. Easy worker: $agent_dir/$easy_file. Only $agent_name uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Model support is not validated by installation; if the worker is unavailable, follow adaptive-apply.md."$'\n'
+            else
+                if [[ "$adapter" == copilot ]]; then printf '%s\n' 'Copilot: VS Code usa nombres como "Claude Sonnet 4.5 (copilot)"; Copilot CLI usa IDs como "claude-sonnet-4.5".'; fi
+                read -r -p 'easy - modelo [vacio = predeterminado del cliente]: ' model || return 1
+                model=$(printf '%s' "$model" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+                case "$adapter" in
+                    copilot) pattern='^[a-zA-Z0-9][a-zA-Z0-9 ._:/()-]*$' ;;
+                    cursor) pattern='^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(\[([a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+(,[a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+)*)?\])?$' ;;
+                    opencode) pattern='^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(#[a-zA-Z0-9][a-zA-Z0-9._-]*)?$' ;;
+                    *) pattern='^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$' ;;
+                esac
+                if [[ -n "$model" && ! "$model" =~ $pattern ]]; then printf '%s\n' 'Identificador de modelo invalido.' >&2; return 1; fi
+                description='Execute only the Easy step explicitly assigned by the LiteSpec parent.'
+                content=$'---\n'
+                if [[ "$adapter" != opencode ]]; then content+=$'name: litespec-easy\n'; fi
+                content+="description: $description"$'\n'
+                if [[ "$adapter" == opencode ]]; then content+=$'mode: subagent\n'; fi
+                if [[ "$adapter" == gemini ]]; then content+=$'kind: local\n'; fi
+                if [[ -n "$model" ]]; then content+="model: '$model'"$'\n'; fi
+                content+=$'---\n\n'"Follow $relative/litespec-shared/easy-worker.md for the assigned step. Do not delegate."$'\n'
             fi
             native_paths+=("$active")
             native_sources+=('')

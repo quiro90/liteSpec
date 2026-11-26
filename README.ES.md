@@ -8,7 +8,7 @@ La documentación generada sigue el mismo objetivo: mínima, organizada por tema
 
 ## Flujo
 
-El instalador ofrece **Clásico** para todos los agentes y **Adaptive** para Claude Code y Codex. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
+El instalador ofrece **Clásico** para todos los agentes y **Adaptive** para Claude Code y Codex, además de Adaptive experimental para GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
 
 1. **Explore:** inspeccionar lo relevante y confirmar objetivo y alcance.
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
@@ -43,18 +43,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\lite.spec.install.ps1
 bash ./lite.spec.install.sh
 ```
 
-Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional. La instalación es local al proyecto:
+Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional; GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code ofrecen Adaptive experimental (*exp.*). La instalación es local al proyecto:
 
 | Agente | Destino | Adaptativo |
 |---|---|:---:|
 | [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ |
 | [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ |
-| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | — |
-| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | — |
-| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | — |
+| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | ✅ exp. |
+| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | ✅ exp. |
+| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | ✅ exp. |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` | — |
-| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | — |
-| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | — |
+| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | ✅ exp. |
+| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | ✅ exp. |
 | [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` | — |
 | [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` | — |
 | [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` | — |
@@ -84,7 +84,9 @@ En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independiente
 | Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
 | Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**: roles de solo lectura `search` y `plan` para análisis en cualquier fase. Enter conserva la activación actual; en un proyecto nuevo empieza desactivada. |
 
-Los demás agentes usan Clásico. El instalador conserva los perfiles personalizados al desactivarlos y restaurarlos. Al crear un perfil puedes configurar modelo y esfuerzo. Abre una sesión nueva para cargarlo. El antiguo rol `implement` queda retirado: cualquier ejecución para Codex o Claude Code lo mueve a `.litespec/disabled-agents/` y regenera un marcador de activación antiguo; la delegación de implementación pertenece solo a Adaptive.
+Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. El instalador conserva los perfiles personalizados al desactivarlos y restaurarlos. Al crear un perfil puedes configurar modelo y esfuerzo. Abre una sesión nueva para cargarlo. El antiguo rol `implement` queda retirado: cualquier ejecución para Codex o Claude Code lo mueve a `.litespec/disabled-agents/` y regenera un marcador de activación antiguo; la delegación de implementación pertenece solo a Adaptive.
+
+**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Tras elegir el agente, el instalador solo pregunta la ejecución de pasos; los roles Auto model siguen siendo exclusivos de Codex y Claude Code. Adaptive crea el ejecutor Easy del cliente (`.github/agents/litespec-easy.agent.md`, o `litespec-easy.md` en `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` o `.qwen/agents/`) y `litespec-shared/adaptive-active.md`, un marcador que nombra al cliente e indica cómo invocar al ejecutor; los demás clientes lo ignoran. El modelo es opcional: vacío conserva el predeterminado del cliente, así que conviene indicar uno más económico para ahorrar cuota (OpenCode usa `proveedor/modelo`; Copilot en VS Code usa nombres como `Claude Sonnet 4.5 (copilot)` y Copilot CLI IDs como `claude-sonnet-4.5`). Clásico mueve ambos archivos a `.litespec/disabled-agents/<cliente>/` y una ejecución Adaptive posterior los restaura. Aún sin validar en clientes ni entornos reales (Copilot en VS Code o CLI): puede ser necesario habilitar la delegación en el cliente, y cualquier cliente puede ignorar o reemplazar el modelo pedido.
 
 Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive asigna dificultad residual, responsable y revisión focalizada cuando corresponde. Apply completa las fases pendientes si se invoca directamente y despacha un paso Easy delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
 

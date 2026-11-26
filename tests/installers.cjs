@@ -33,7 +33,7 @@ function read(f,p) {return fs.readFileSync(path.join(f.root,p),'utf8');}
 {
   const f = fixture('ignore-single-crlf');
   fs.writeFileSync(path.join(f.root,'.gitignore'),'# Windows\r\n');
-  run(f, '3\nno\ni');
+  run(f, '3\n\nno\ni');
   assert(!read(f,'.gitignore').replaceAll('\r\n','').includes('\n'), 'preserve CRLF for appended rules');
 }
 {
@@ -64,7 +64,7 @@ if (process.argv[3] === 'gitignore-edge') { console.log('PASS '+engine+': CRLF a
 for (const answer of ['i','INS','no','']) {
   const f = fixture('ignore-answer-'+(answer || 'empty'));
   fs.writeFileSync(path.join(f.root,'.gitignore'),'# keep\n');
-  run(f, '3\nno\n'+answer);
+  run(f, '3\n\nno\n'+answer);
   const text = read(f,'.gitignore');
   if (['i','INS'].includes(answer)) {
     assert(text.includes('/'+path.basename(f.script)));
@@ -108,7 +108,7 @@ for (const answer of ['i','INS','no','']) {
 
 for (const agent of Array.from({length:13}, (_,i) => String(i+1))) {
   const f = fixture(`basic-${agent}`);
-  const output = run(f, agent + (['1','2'].includes(agent) ? '\n\n' : '') + '\nno');
+  const output = run(f, agent + (['1','2'].includes(agent) ? '\n\n' : ['3','4','5','7','8'].includes(agent) ? '\n' : '') + '\nno');
   assert.doesNotMatch(output, /gpt-6-luna/);
   assert(!fs.existsSync(path.join(f.root,'.gitignore')), 'do not create a missing .gitignore');
   assert.match(output, /Agente: .+ \| Modo: Clasico/);
@@ -116,6 +116,7 @@ for (const agent of Array.from({length:13}, (_,i) => String(i+1))) {
   const destinations = ['.agents','.claude','.github','.cursor','.opencode','.qoder','.gemini','.qwen','.cline','.devin','.ade','.agents','.minimax'];
   const skills = destinations[Number(agent)-1]+'/skills';
   assert(!fs.existsSync(path.join(f.root,skills,'litespec-shared/delegation-active.md')));
+  assert(!fs.existsSync(path.join(f.root,skills,'litespec-shared/adaptive-active.md')));
   for (const skill of ['explore','propose','apply','modify','verify','archive']) {
     const rel = 'litespec-'+skill+'/SKILL.md';
     assert.equal(read(f,skills+'/'+rel), fs.readFileSync(path.join(source,sources,rel),'utf8'));
@@ -197,6 +198,7 @@ for (const [agent, adapter, ext, model] of [
   assert(read(f,profile).includes(workerRules));
   assert.equal(read(f,workerRules), read({root:source}, sources+'/litespec-shared/easy-worker.md'));
   assert(!read(f,profile).includes('tools: Read, Grep, Glob'));
+  assert(!fs.existsSync(path.join(f.root,skillsRoot,'litespec-shared/adaptive-active.md')), 'Codex/Claude never use the other-client marker');
   const personalized = read(f,profile).replace(model,'custom-model');
   fs.writeFileSync(path.join(f.root,profile), personalized);
   run(f, `${agent}\n2\n2\n\n\n\n\nno`);
@@ -208,6 +210,64 @@ for (const [agent, adapter, ext, model] of [
   run(f, `${agent}\n2\n1\nno`);
   assert.equal(read(f,profile), personalized);
   assert(!fs.existsSync(path.join(f.root,`.${adapter}/agents/litespec-search.${ext}`)));
+}
+// Experimental Adaptive for other clients: a native Easy worker plus a marker naming the client.
+for (const [agent, adapter, skills, worker, name] of [
+  ['3','copilot','.github/skills','.github/agents/litespec-easy.agent.md','GitHub Copilot'],
+  ['4','cursor','.cursor/skills','.cursor/agents/litespec-easy.md','Cursor'],
+  ['5','opencode','.opencode/skills','.opencode/agents/litespec-easy.md','OpenCode'],
+  ['7','gemini','.gemini/skills','.gemini/agents/litespec-easy.md','Gemini CLI'],
+  ['8','qwen','.qwen/skills','.qwen/agents/litespec-easy.md','Qwen Code'],
+]) {
+  const f = fixture('adaptive-'+adapter);
+  const marker = skills+'/litespec-shared/adaptive-active.md';
+  const model = {
+    copilot: 'Claude Sonnet 4.5 (copilot)',
+    cursor: 'composer-2.5[fast=false]',
+    opencode: 'anthropic/claude-sonnet-5-5#high',
+  }[adapter] || 'provider/model-easy';
+  const output = run(f, `${agent}\n2\n${model}\nno`);
+  assert.match(output, /Adaptive experimental/);
+  assert.match(output, /creados=2; restaurados=0; conservados=0; guardados=0/);
+  const profile = read(f, worker);
+  assert(profile.startsWith('---\n'));
+  assert(profile.includes(`model: '${model}'`));
+  assert(profile.includes(skills+'/litespec-shared/easy-worker.md'));
+  assert.equal(profile.includes('name: litespec-easy'), adapter !== 'opencode');
+  assert.equal(profile.includes('mode: subagent'), adapter === 'opencode');
+  assert.equal(profile.includes('kind: local'), adapter === 'gemini');
+  assert(read(f, marker).includes(`Client: ${name}.`));
+  if (adapter === 'opencode' || adapter === 'qwen') {
+    assert.match(read(f, marker), /Invoke the litespec-easy subagent through native subagent delegation/);
+  }
+  if (adapter === 'copilot') {
+    assert.match(read(f, marker), /VS Code, Copilot CLI or other/);
+    assert.doesNotMatch(read(f, marker), /runSubagent/, 'Copilot marker stays surface-neutral');
+    assert.match(output, /Copilot CLI usa IDs/);
+  }
+  assert(!fs.existsSync(path.join(f.root,'.codex')) && !fs.existsSync(path.join(f.root,'.claude')));
+  const personalized = profile + '\n# personal\n';
+  fs.writeFileSync(path.join(f.root,worker), personalized);
+  assert.match(run(f, `${agent}\n2\nno`), /conservados=2/);
+  assert.equal(read(f, worker), personalized);
+  const classic = run(f, `${agent}\n1\nno`);
+  assert.match(classic, /Modo: Clasico/);
+  assert.match(classic, /guardados=2/);
+  assert(!fs.existsSync(path.join(f.root,worker)) && !fs.existsSync(path.join(f.root,marker)));
+  assert.equal(read(f, `.litespec/disabled-agents/${adapter}/${path.basename(worker)}`), personalized);
+  assert.match(run(f, `${agent}\n2\nno`), /restaurados=2/);
+  assert.equal(read(f, worker), personalized);
+  assert(read(f, marker).includes(`Client: ${name}.`));
+}
+{
+  const f = fixture('adaptive-default-model');
+  run(f, '5\n2\n\nno');
+  assert.doesNotMatch(read(f,'.opencode/agents/litespec-easy.md'), /model:/, 'empty model keeps the client default');
+}
+for (const [label, bad] of [['quote', "3\n2\nbad'model\n"], ['space', '5\n2\nwith space\n'], ['mode', '7\n3\n']]) {
+  const f = fixture('adaptive-invalid-'+label);
+  run(f, bad, false);
+  for (const dir of ['.github','.opencode','.gemini']) assert(!fs.existsSync(path.join(f.root,dir)), dir);
 }
 // A legacy implement role is retired: any Codex/Claude run moves it aside and keeps its content.
 for (const [agent, adapter, ext] of [['1','codex','toml'],['2','claude','md']]) {

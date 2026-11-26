@@ -98,7 +98,7 @@ function Install-LiteSpec {
     }
 
     Write-Host "LiteSpec - proyecto: $projectRoot"
-    Write-Host '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot  4) Cursor  5) OpenCode  6) Qoder CLI  7) Gemini CLI  8) Qwen Code  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
+    Write-Host '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot [Clasico/Adaptive exp.]  4) Cursor [Clasico/Adaptive exp.]  5) OpenCode [Clasico/Adaptive exp.]  6) Qoder CLI  7) Gemini CLI [Clasico/Adaptive exp.]  8) Qwen Code [Clasico/Adaptive exp.]  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
     [string]$choice = Read-Host 'Agente [1-13]'
     $relative = switch (([string]$choice).Trim()) {
         '1' { '.agents/skills' }
@@ -244,6 +244,81 @@ function Install-LiteSpec {
                     if ($role -ne 'easy') { $content += "tools: Read, Grep, Glob`n" }
                     $content += "---`n`n$instructions`n"
                 }
+            }
+            $nativeFiles += @{ Path = $active; Content = $content }
+        }
+    } elseif ($choice.Trim() -in @('3', '4', '5', '7', '8')) {
+        # Experimental Adaptive for other clients: an Easy worker plus a marker naming this client.
+        # Codex and Claude Code keep their own branch above, unchanged.
+        Write-Host 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive experimental - delegar pasos Easy'
+        [string]$mode = Read-Host 'Modo [1]'
+        if ($mode.Trim() -notin @('', '1', '2')) { throw 'Modo invalido.' }
+        $adaptive = $mode.Trim() -eq '2'
+        if ($adaptive) { $modeLabel = 'Adaptive experimental' }
+        $spec = @{
+            '3' = @('copilot', '.github/agents', 'litespec-easy.agent.md', 'through the native subagent or custom-agent delegation of the current surface (VS Code, Copilot CLI or other)')
+            '4' = @('cursor', '.cursor/agents', 'litespec-easy.md', 'through native subagent delegation')
+            '5' = @('opencode', '.opencode/agents', 'litespec-easy.md', 'through native subagent delegation')
+            '7' = @('gemini', '.gemini/agents', 'litespec-easy.md', 'through its native subagent tool')
+            '8' = @('qwen', '.qwen/agents', 'litespec-easy.md', 'through native subagent delegation')
+        }[$choice.Trim()]
+        $adapter = $spec[0]; $agentDir = $spec[1]; $easyFile = $spec[2]; $invoke = $spec[3]
+        $agentRoot = Join-Path $projectRoot $agentDir
+        $disabledRoot = Join-Path $dataRoot "disabled-agents/$adapter"
+        # Install the worker before the marker; remove the marker before the worker.
+        $targets = @(
+            @{ Name = $easyFile; Active = (Join-Path $agentRoot $easyFile) },
+            @{ Name = 'adaptive-active.md'; Active = (Join-Path $destination 'litespec-shared/adaptive-active.md') }
+        )
+        if (-not $adaptive) { [array]::Reverse($targets) }
+        foreach ($target in $targets) {
+            $name = $target.Name
+            $active = $target.Active
+            if (-not $adaptive -and -not (Get-Item -LiteralPath $active -Force -ErrorAction SilentlyContinue)) { continue }
+            $saved = Join-Path $disabledRoot $name
+            foreach ($path in @($active, $saved)) {
+                Assert-LocalPath $path
+                if ((Test-Path -LiteralPath $path) -and -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+                    throw "No es un archivo: $path"
+                }
+            }
+            $hasActive = Test-Path -LiteralPath $active
+            $hasSaved = Test-Path -LiteralPath $saved
+            if ($hasActive -and $hasSaved) { throw "Existen ambas configuraciones: $active y $saved. Revisa cual conservar." }
+            if (-not $adaptive) {
+                if ($hasActive) { $nativeFiles += @{ Path = $saved; Source = $active; Restore = $false } }
+                continue
+            }
+            if ($hasActive) {
+                $preserved++
+                Write-Host "Se conserva: $active"
+                continue
+            }
+            if ($hasSaved) {
+                $nativeFiles += @{ Path = $active; Source = $saved; Restore = $true }
+                continue
+            }
+            if ($name -eq 'adaptive-active.md') {
+                $content = "# Experimental - Adaptive execution enabled`nClient: $agentName. Easy worker: $agentDir/$easyFile. Only $agentName uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Model support is not validated by installation; if the worker is unavailable, follow adaptive-apply.md.`n"
+            } else {
+                if ($adapter -eq 'copilot') { Write-Host 'Copilot: VS Code usa nombres como "Claude Sonnet 4.5 (copilot)"; Copilot CLI usa IDs como "claude-sonnet-4.5".' }
+                [string]$model = Read-Host 'easy - modelo [vacio = predeterminado del cliente]'
+                $model = $model.Trim()
+                $pattern = switch ($adapter) {
+                    'copilot'  { '^[a-zA-Z0-9][a-zA-Z0-9 ._:/()-]*$' }
+                    'cursor'   { '^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(\[([a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+(,[a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+)*)?\])?$' }
+                    'opencode' { '^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(#[a-zA-Z0-9][a-zA-Z0-9._-]*)?$' }
+                    default    { '^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$' }
+                }
+                if ($model -and $model -notmatch $pattern) { throw 'Identificador de modelo invalido.' }
+                $description = 'Execute only the Easy step explicitly assigned by the LiteSpec parent.'
+                $content = "---`n"
+                if ($adapter -ne 'opencode') { $content += "name: litespec-easy`n" }
+                $content += "description: $description`n"
+                if ($adapter -eq 'opencode') { $content += "mode: subagent`n" }
+                if ($adapter -eq 'gemini') { $content += "kind: local`n" }
+                if ($model) { $content += "model: '$model'`n" }
+                $content += "---`n`nFollow $relative/litespec-shared/easy-worker.md for the assigned step. Do not delegate.`n"
             }
             $nativeFiles += @{ Path = $active; Content = $content }
         }

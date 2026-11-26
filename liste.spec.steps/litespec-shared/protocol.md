@@ -6,7 +6,7 @@ Assigned workers: follow the parent assignment and applicable AGENTS.md. For an 
 
 Parent sessions: if the project directory `.litespec/serial/` exists, acquire the [single-change claim](serial.md) before proceeding.
 
-Adaptive execution is active only in Codex with project `.codex/agents/litespec-easy.toml`, or Claude Code with `.claude/agents/litespec-easy.md`. Otherwise ignore Adaptive rules.
+Adaptive execution is active only in Codex with project `.codex/agents/litespec-easy.toml`, or Claude Code with `.claude/agents/litespec-easy.md`. In other clients it is active only if sibling `adaptive-active.md` exists, names the current client and its native worker file exists; then read it. Otherwise ignore Adaptive rules.
 
 If sibling `delegation-active.md` exists, read it; load [delegation rules](delegation.md) only if its adapter matches the current client (Codex or Claude Code). Unknown or different client: normal workflow; never infer the client from shared paths.
 

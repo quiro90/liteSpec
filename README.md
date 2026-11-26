@@ -8,7 +8,7 @@ Generated documentation follows the same goal: minimal, organized by topic, and 
 
 ## Workflow
 
-The installer offers **Classic** for all agents and **Adaptive** for Claude Code and Codex. In both modes a step delivers a verifiable outcome. In Adaptive the parent can assign an Easy implementation step to Sonnet or Sol, then resume control for verification. [Installer options](#choosing-execution-mode)
+The installer offers **Classic** for all agents and **Adaptive** for Claude Code and Codex, plus experimental Adaptive for GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code. In both modes a step delivers a verifiable outcome. In Adaptive the parent can assign an Easy implementation step to Sonnet or Sol, then resume control for verification. [Installer options](#choosing-execution-mode)
 
 1. **Explore:** inspect relevant context and confirm the goal and scope.
 2. **Propose:** prepare `spec.md` as an index and steps with context, tasks, and checks. A small change can use a single file.
@@ -43,18 +43,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\lite.spec.install.ps1
 bash ./lite.spec.install.sh
 ```
 
-Choose the agent. Codex and Claude Code then offer optional model configuration. Installation is local to the project:
+Choose the agent. Codex and Claude Code then offer optional model configuration; GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code offer experimental Adaptive (*exp.*). Installation is local to the project:
 
 | Agent | Destination | Adaptive |
 |---|---|:---:|
 | [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ |
 | [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ |
-| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | — |
-| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | — |
-| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | — |
+| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | ✅ exp. |
+| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | ✅ exp. |
+| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | ✅ exp. |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` | — |
-| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | — |
-| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | — |
+| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | ✅ exp. |
+| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | ✅ exp. |
 | [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` | — |
 | [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` | — |
 | [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` | — |
@@ -84,7 +84,9 @@ Codex and Claude Code offer two independent choices after agent selection.
 | Step execution | **1 Classic** (Enter) or **2 Adaptive**. In Adaptive, Easy uses the configurable `litespec-easy` profile. Enter when creating it selects `gpt-6.2-sol` in Codex or `sonnet` in Claude. |
 | Internal skill delegation | **1 Disabled** or **2 Auto model by role**: read-only `search` and `plan` roles for analysis in any phase. Enter keeps the current role activation, initially disabled in a new project. |
 
-Other agents use Classic. The installer saves and restores customized profiles. The former `implement` role is retired: any Codex or Claude Code run moves it to `.litespec/disabled-agents/` and regenerates an older activation marker; implementation delegation now belongs to Adaptive only. Model and effort are configurable at creation. Start a new client session to load them.
+Qoder CLI, Cline, Devin Local, ADE, Zed and MiniMax Code use Classic. The installer saves and restores customized profiles. The former `implement` role is retired: any Codex or Claude Code run moves it to `.litespec/disabled-agents/` and regenerates an older activation marker; implementation delegation now belongs to Adaptive only. Model and effort are configurable at creation. Start a new client session to load them.
+
+**Experimental Adaptive (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** After agent selection the installer asks only for step execution; Auto model roles remain exclusive to Codex and Claude Code. Adaptive creates the client's Easy worker (`.github/agents/litespec-easy.agent.md`, or `litespec-easy.md` in `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` or `.qwen/agents/`) and `litespec-shared/adaptive-active.md`, a marker that names the client and how to invoke the worker; other clients ignore it. The model is optional: empty keeps the client default, so set a cheaper model to save quota (OpenCode uses `provider/model`; Copilot in VS Code uses names such as `Claude Sonnet 4.5 (copilot)` and Copilot CLI IDs such as `claude-sonnet-4.5`). Classic moves both files to `.litespec/disabled-agents/<client>/`; a later Adaptive run restores them. Not yet validated in real clients or surfaces (Copilot in VS Code or CLI): delegation may need to be enabled in the client, and any client may ignore or override the requested model.
 
 Explore records contracts, patterns and acceptance examples. Propose groups code, tests and documentation by delivered outcome. In Adaptive it assigns residual difficulty, ownership and focused review where needed. Direct Apply fills missing phases and dispatches one eligible Easy step at a time. Standalone Verify checks scope, current evidence and risk boundaries.
 

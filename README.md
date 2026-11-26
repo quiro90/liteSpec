@@ -26,7 +26,7 @@ go vet ./...
 
 On Windows, run `go build -o litespec.exe .`. On macOS and Linux, run `go build -o litespec .`.
 
-A direct `go build` reports the version as `dev`. The packaging script embeds the version supplied through `-Version`. GitHub Actions supplies the release tag.
+A direct `go build` uses the version declared in `main.go`. The packaging script embeds the version supplied through `-Version`. GitHub Actions supplies the release tag.
 
 The build embeds these paths from `lite.spec.steps/` using `go:embed`.
 

@@ -26,7 +26,7 @@ go vet ./...
 
 En Windows, ejecuta `go build -o litespec.exe .`. En macOS y Linux, ejecuta `go build -o litespec .`.
 
-Una compilación directa con `go build` muestra `dev` como versión. El script de empaquetado guarda en el binario la versión indicada con `-Version`. GitHub Actions usa el tag de la versión.
+Una compilación directa con `go build` usa la versión declarada en `main.go`. El script de empaquetado guarda en el binario la versión indicada con `-Version`. GitHub Actions usa el tag de la versión.
 
 La compilación incluye en el ejecutable estos archivos de `lite.spec.steps/` mediante `go:embed`.
 

@@ -6,11 +6,67 @@ Especificaciones breves y claras para trabajar con agentes de IA consumiendo poc
 
 La documentación generada sigue el mismo objetivo: mínima, organizada por temas y útil para continuar sin reconstruir conversaciones.
 
-> **Experimental.** LiteSpec en su conjunto es experimental: el flujo, Adaptive, la delegación por roles y los instaladores pueden cambiar entre versiones y no están validados en todos los clientes. Revisa las specs, los cambios y las comprobaciones que produzca el agente antes de confiar en ellos.
+> **Experimental.** LiteSpec en su conjunto es experimental: el flujo, Adaptive, la delegación por roles y el instalador pueden cambiar entre versiones y no están validados en todos los clientes. Revisa las specs, los cambios y las comprobaciones que produzca el agente antes de confiar en ellos.
+
+## Compilar y publicar
+
+### Requisitos previos
+
+- Go 1.25 o posterior para compilar desde el código fuente.
+- PowerShell 7.3 o posterior (`pwsh`) para generar los paquetes de distribución.
+
+### Compilar para tu sistema
+
+Ejecuta estas comprobaciones desde la raíz del repositorio.
+
+```text
+go test ./...
+go vet ./...
+```
+
+En Windows, ejecuta `go build -o litespec.exe .`. En macOS y Linux, ejecuta `go build -o litespec .`.
+
+Una compilación directa con `go build` muestra `dev` como versión. El script de empaquetado guarda en el binario la versión indicada con `-Version`. GitHub Actions usa el tag de la versión.
+
+La compilación incluye en el ejecutable estos archivos de `lite.spec.steps/` mediante `go:embed`.
+
+- `lite.spec.steps/litespec-*/SKILL.md` para las definiciones de las skills.
+- `lite.spec.steps/litespec-shared/*.md` para las reglas compartidas.
+
+Si cambias el nombre de la carpeta fuente, actualiza la directiva `go:embed` en `main.go` y `sourceTree` en `install.go`. Si mueves un archivo del paquete fuera de esos patrones, actualiza la directiva. Vuelve a compilar después de editar una skill o una regla para que el ejecutable incluya los cambios.
+
+### Empaquetar para distribuir
+
+Desde la raíz del repositorio, ejecuta el comando de empaquetado con `go` en el `PATH`.
+
+```powershell
+pwsh -File scripts/package.ps1 -Version v0.1.0
+```
+
+El script compila seis binarios con `CGO_ENABLED=0` e incorpora la versión indicada, que puedes consultar con `litespec --version`. Por defecto genera los archivos en `dist/`. Usa `-OutputDirectory` para elegir otra carpeta.
+
+| Plataforma | Arquitecturas | Formato |
+|---|---|---|
+| Windows | x64, ARM64 | `.zip` |
+| macOS | x64, ARM64 | `.tar.gz` |
+| Linux | x64, ARM64 | `.tar.gz` |
+
+Cada paquete contiene el ejecutable, `LICENSE` y `THIRD_PARTY_LICENSES.txt`. `SHA256SUMS.txt` contiene las sumas de comprobación de los seis paquetes.
+
+### Publicar una versión
+
+Usa un tag de versión con formato `vX.Y.Z` y un sufijo opcional para versiones preliminares, como `-rc.1`. Créalo en el commit que quieras publicar y súbelo a GitHub.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+GitHub Actions ejecuta `go test` y `go vet` en Windows, macOS y Linux. Si pasan todas las comprobaciones, usa el mismo script de empaquetado y sube los paquetes y sus sumas a GitHub Releases. Los tags con un sufijo como `-rc.1` se publican como versiones preliminares.
 
 ## Flujo
 
-El instalador ofrece **Clásico** para todos los agentes y **Adaptive** para Claude Code y Codex, además de Adaptive experimental para GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
+El instalador ofrece **Clásico** para todos los agentes y **Adaptive experimental** para Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. Adaptive está en una etapa inicial de pruebas en todos los clientes compatibles. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
 
 1. **Explore:** inspeccionar lo relevante y confirmar objetivo y alcance.
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
@@ -31,26 +87,32 @@ Antes de archivar se comprueban tareas, aceptación, integración, compatibilida
 
 ## Instalar
 
-Copia la carpeta `liste.spec.steps/` completa y el instalador correspondiente en la **raíz del proyecto donde usarás LiteSpec**, uno al lado del otro. No necesitas Python, Node ni descargas adicionales.
+Descarga el paquete de tu sistema y arquitectura desde [GitHub Releases](https://github.com/quiro90/liteSpec/releases), extráelo una vez y guarda el ejecutable donde te resulte cómodo. En los nombres de descarga, `darwin` corresponde a macOS, `amd64` a x64 y `arm64` a ARM64 (incluido Apple Silicon). El binario trae todas las skills y funciona sin conexión. Para usarlo no hace falta instalar Go, Node ni Python.
 
-**Windows — PowerShell:**
+Abre una terminal en la raíz del proyecto y ejecuta LiteSpec. Por ejemplo, en Windows:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\lite.spec.install.ps1
+& "C:\herramientas\litespec.exe" init
 ```
 
-**Linux / macOS — Bash:**
+En Linux o macOS:
 
 ```bash
-bash ./lite.spec.install.sh
+~/bin/litespec init
 ```
 
-Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional; GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code ofrecen Adaptive experimental (*exp.*). La instalación es local al proyecto:
+Usa la ruta donde guardaste el ejecutable. Si lo agregas al `PATH`, basta con `litespec init`. Para instalar desde otra carpeta, añade `--project "ruta al proyecto"`. Para consultar la versión, usa `litespec --version`.
+
+En una terminal interactiva, elige primero español o inglés. Usa ↑ y ↓ para moverte, Enter para elegir y Esc para cancelar. Usa `--lang es` o `--lang en` para saltar la elección de idioma. Con entrada redirigida se usa el menú numerado en español por defecto. Usa `--plain` para activar ese modo manualmente.
+
+Antes del menú de agentes, `init` muestra la versión del ejecutable en uso y las carpetas del proyecto que ya contienen skills de LiteSpec. Si eliges un agente que usa una de esas carpetas, el instalador actualiza los archivos del paquete y ajusta los perfiles de LiteSpec de ese agente según tus opciones. Se conservan los archivos adicionales y los datos de `.litespec/`.
+
+Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional. La instalación es local al proyecto:
 
 | Agente | Destino | Adaptativo |
 |---|---|:---:|
-| [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ |
-| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ |
+| [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ exp. |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ exp. |
 | [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | ✅ exp. |
 | [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | ✅ exp. |
 | [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | ✅ exp. |
@@ -69,9 +131,7 @@ Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raí
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; el impacto documental siempre se evalúa antes de cerrar.
 
-Al terminar, `si`, `sí`, `yes` o `y` confirma borrar los archivos fuente instalados y el instalador ejecutado; cualquier otra respuesta los conserva. Solo se eliminan carpetas vacías: archivos adicionales, documentación y código del proyecto se mantienen.
-
-Si ya existe un archivo `.gitignore`, al finalizar se pregunta qué excluir: **y/yes/si/s** agrega el instalador (script ejecutado y carpeta fuente) y las siete carpetas de skills de LiteSpec; **i/ins** agrega solo el instalador; cualquier otra respuesta no modifica nada. Se conservan las reglas existentes y se añaden solo las faltantes. Con Git disponible se reconocen también patrones de exclusión; sin Git se comprueban reglas literales y carpetas padre. No se crea un .gitignore nuevo ni se dejan de versionar archivos ya registrados en Git.
+Si ya existe un `.gitignore`, el instalador ofrece excluir las carpetas de skills de LiteSpec. Si el ejecutable está en la raíz del proyecto, puedes excluirlo también o elegir **i/ins** para excluir solo el ejecutable. Enter conserva el archivo. Se mantienen las reglas existentes y el estado de los archivos ya versionados. Puedes reutilizar el mismo binario en otros proyectos.
 
 Abre una nueva sesión del agente y pide: **«Usa litespec-explore para [tu cambio]»**. Después continúa con `litespec-propose` y `litespec-apply`; puedes pedir un paso concreto o todos los pendientes. Finaliza con `litespec-archive`. Un pedido explícito y claro puede resolver Explore sin otra confirmación; las preguntas materiales pendientes requieren respuesta. Confirmar solo el alcance no autoriza la implementación.
 
@@ -81,7 +141,7 @@ En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independiente
 
 | Pregunta | Opciones |
 |---|---|
-| Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
+| Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive experimental**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
 | Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**: roles de solo lectura `search` y `plan` para análisis en cualquier fase. Enter conserva la activación actual; en un proyecto nuevo empieza desactivada. |
 
 Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Modelo y esfuerzo se preguntan en cada ejecución. Abre una sesión nueva para cargarlos.
@@ -98,7 +158,7 @@ Para comparar los modos, parte de la misma revisión con los mismos requisitos, 
 
 Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, bórralo. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
 
-Para cambiar de modo, ejecuta el instalador para el mismo cliente. Si lo borraste, copia un paquete nuevo. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera. Después abre una sesión nueva.
+Para cambiar de modo, ejecuta el instalador para el mismo cliente. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera. Después abre una sesión nueva.
 
 ## Licencia
 

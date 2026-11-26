@@ -92,22 +92,22 @@ Descarga el paquete de tu sistema y arquitectura desde [GitHub Releases](https:/
 Abre una terminal en la raíz del proyecto y ejecuta LiteSpec. Por ejemplo, en Windows:
 
 ```powershell
-& "C:\herramientas\litespec.exe" init
+& "C:\herramientas\litespec.exe"
 ```
 
 En Linux o macOS:
 
 ```bash
-~/bin/litespec init
+~/bin/litespec
 ```
 
-Usa la ruta donde guardaste el ejecutable. Si lo agregas al `PATH`, basta con `litespec init`. Para instalar desde otra carpeta, añade `--project "ruta al proyecto"`. Para consultar la versión, usa `litespec --version`.
+Usa la ruta donde guardaste el ejecutable. Si lo agregas al `PATH`, basta con `litespec`. Para usar opciones del instalador, escribe el subcomando `init`. Por ejemplo, `litespec init --project "ruta al proyecto"` instala en otra carpeta. Para consultar la versión, usa `litespec --version`.
 
-En una terminal interactiva, elige primero español o inglés. Usa ↑ y ↓ para moverte, Enter para elegir y Esc para cancelar. Usa `--lang es` o `--lang en` para saltar la elección de idioma. Con entrada redirigida se usa el menú numerado en español por defecto. Usa `--plain` para activar ese modo manualmente.
+En una terminal interactiva, elige primero español o inglés. En el menú de agentes, usa ↑ y ↓ para moverte, **Espacio** para marcar o desmarcar, **Enter** para confirmar y **Esc** para cancelar. Ejecuta `litespec init --lang es` o `litespec init --lang en` para saltar la elección de idioma. Con entrada redirigida o `litespec init --plain`, escribe un número o varios separados por comas, como `1,2,4`.
 
-Antes del menú de agentes, `init` muestra la versión del ejecutable en uso y las carpetas del proyecto que ya contienen skills de LiteSpec. Si eliges un agente que usa una de esas carpetas, el instalador actualiza los archivos del paquete y ajusta los perfiles de LiteSpec de ese agente según tus opciones. Se conservan los archivos adicionales y los datos de `.litespec/`.
+Antes del menú de agentes, el instalador muestra la versión del ejecutable en uso y las carpetas del proyecto que ya contienen skills de LiteSpec. Si eliges un agente que usa una de esas carpetas, el instalador actualiza los archivos del paquete y ajusta los perfiles de LiteSpec de ese agente según tus opciones. Se conservan los archivos adicionales y los datos de `.litespec/`.
 
-Elige el agente. Codex y Claude Code ofrecen luego configurar modelos de forma opcional. La instalación es local al proyecto:
+Puedes instalar LiteSpec para varios agentes en una sola pasada. El instalador pide el modo y la configuración de cada agente que ofrezca esas opciones. La instalación es local al proyecto:
 
 | Agente | Destino | Adaptativo |
 |---|---|:---:|
@@ -131,7 +131,7 @@ Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raí
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; el impacto documental siempre se evalúa antes de cerrar.
 
-Si ya existe un `.gitignore`, el instalador ofrece excluir las carpetas de skills de LiteSpec. Si el ejecutable está en la raíz del proyecto, puedes excluirlo también o elegir **i/ins** para excluir solo el ejecutable. Enter conserva el archivo. Se mantienen las reglas existentes y el estado de los archivos ya versionados. Puedes reutilizar el mismo binario en otros proyectos.
+Si ya existe un `.gitignore`, al terminar la instalación verás una sola pregunta para excluir las skills de LiteSpec que acabas de instalar. Si el ejecutable está en la raíz del proyecto, puedes excluir solo las skills, solo el ejecutable o ambos. Enter conserva el archivo. Se mantienen las reglas existentes y el estado de los archivos ya versionados. Puedes reutilizar el mismo binario en otros proyectos.
 
 Abre una nueva sesión del agente y pide: **«Usa litespec-explore para [tu cambio]»**. Después continúa con `litespec-propose` y `litespec-apply`; puedes pedir un paso concreto o todos los pendientes. Finaliza con `litespec-archive`. Un pedido explícito y claro puede resolver Explore sin otra confirmación; las preguntas materiales pendientes requieren respuesta. Confirmar solo el alcance no autoriza la implementación.
 
@@ -159,6 +159,16 @@ Para comparar los modos, parte de la misma revisión con los mismos requisitos, 
 Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, bórralo. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
 
 Para cambiar de modo, ejecuta el instalador para el mismo cliente. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera. Después abre una sesión nueva.
+
+## Numeración de versiones
+
+LiteSpec usa el formato `vMAYOR.MENOR.PARCHE`.
+
+- **Parche** sube con cambios de interfaz y ajustes pequeños.
+- **Menor** sube con cambios medianos en la especificación o cuando el parche ya llegó a `999`.
+- **Mayor** sube con un cambio de gran alcance en LiteSpec o cuando la versión menor ya llegó a `999`.
+
+Al subir la versión menor, el parche vuelve a `0` (`v0.1.999` → `v0.2.0`). Al subir la versión mayor, ambos vuelven a `0` (`v0.999.0` → `v1.0.0`).
 
 ## Licencia
 

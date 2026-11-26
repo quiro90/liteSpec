@@ -109,8 +109,8 @@ func run(args []string, input io.Reader, out io.Writer, executable string) error
 			"Found an existing LiteSpec installation in %s.",
 		), strings.Join(destinations, ", ")))
 		fmt.Fprintln(display.out, menu.text(
-			"Se actualizarán las skills del agente que elijas. Sus perfiles se ajustarán a tus opciones. Se conservarán los demás archivos y los datos en .litespec/.",
-			"The selected agent's skills and profiles will be updated to match your choices. Extra files and data in .litespec/ will be preserved.",
+			"Se actualizarán las skills de los agentes que elijas. Sus perfiles se ajustarán a tus opciones. Se conservarán los demás archivos y los datos en .litespec/.",
+			"Skills and profiles for the selected agents will be updated to match your choices. Extra files and data in .litespec/ will be preserved.",
 		))
 	} else {
 		display.status("○", "#FA8072", menu.text("Primera instalación en este proyecto.", "First installation in this project."))
@@ -131,11 +131,14 @@ func run(args []string, input io.Reader, out io.Writer, executable string) error
 		options[index] = fmt.Sprintf("%-15s %s", agent.name, label)
 	}
 	menu.intro = intro.String()
-	choice, err := menu.choose(menu.text("Elegí un agente", "Choose an agent"), menu.text("Agente [1-13]", "Agent [1-13]"),
-		options, -1, menu.text("selección inválida", "invalid selection"))
+	choices, err := menu.chooseAgents(options)
 	if err != nil {
 		return err
 	}
 	menu.opening = false
-	return install(root, menu, agents[choice], executable)
+	selected := make([]agent, 0, len(choices))
+	for _, choice := range choices {
+		selected = append(selected, agents[choice])
+	}
+	return install(root, menu, selected, executable)
 }

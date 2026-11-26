@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func askGitignore(root *os.Root, menu terminal, folders []string, executable string) ([]string, error) {
+func askGitignore(root *os.Root, menu terminal, destinations, folders []string, executable string) ([]string, error) {
 	info, err := root.Lstat(".gitignore")
 	if errors.Is(err, fs.ErrNotExist) || (err == nil && info.IsDir()) {
 		return nil, nil
@@ -32,17 +32,28 @@ func askGitignore(root *os.Root, menu terminal, folders []string, executable str
 		}
 	}
 	leave := menu.text("Conservar como está", "Leave unchanged")
-	options := []string{leave, menu.text("Excluir las skills de LiteSpec", "Ignore LiteSpec skills")}
+	skillsOnly := menu.text("Excluir solo las skills instaladas", "Ignore only the installed skills")
+	options := []string{leave, skillsOnly}
 	prompt := menu.text(
-		"¿Añadir las carpetas de LiteSpec a .gitignore? [s/si/y/yes, Enter conserva]",
-		"Add the LiteSpec folders to .gitignore? [y/yes, Enter keeps unchanged]",
+		"¿Qué excluir en .gitignore? [s] Skills instaladas | [Enter] Conservar",
+		"What should .gitignore exclude? [y] Installed skills | [Enter] Keep",
 	)
 	if executableName != "" {
-		options = []string{leave, menu.text("Excluir el ejecutable y las skills", "Ignore the executable and skills"), menu.text("Excluir solo el ejecutable", "Ignore only the executable")}
+		options = []string{leave, menu.text("Excluir el ejecutable y las skills instaladas", "Ignore the executable and installed skills"),
+			menu.text("Excluir solo el ejecutable", "Ignore only the executable"), skillsOnly}
 		prompt = menu.text(
-			"¿Qué añadir a .gitignore? [s/si/y/yes] Ejecutable y skills | [i/ins] Solo ejecutable | [Enter] Conservar",
-			"What should .gitignore exclude? [y/yes] Executable and skills | [i/ins] Executable only | [Enter] Leave unchanged",
+			"¿Qué excluir en .gitignore? [s] Ejecutable y skills | [i] Solo ejecutable | [c] Solo skills | [Enter] Conservar",
+			"What should .gitignore exclude? [y] Executable and skills | [i] Executable only | [c] Skills only | [Enter] Keep",
 		)
+	}
+	fmt.Fprintln(menu.out)
+	fmt.Fprintln(menu.out, menu.text("Skills de LiteSpec instaladas en", "LiteSpec skills installed in"))
+	for _, destination := range destinations {
+		fmt.Fprintln(menu.out, "  • "+destination)
+	}
+	if executableName != "" {
+		fmt.Fprintln(menu.out, menu.text("Ejecutable en la raíz del proyecto", "Executable in the project root"))
+		fmt.Fprintln(menu.out, "  • "+executableName)
 	}
 	var choice int
 	if menu.interactive {
@@ -61,6 +72,8 @@ func askGitignore(root *os.Root, menu terminal, folders []string, executable str
 			choice = 1
 		case "i", "ins":
 			choice = 2
+		case "c":
+			choice = 3
 		}
 	}
 	switch choice {
@@ -73,6 +86,8 @@ func askGitignore(root *os.Root, menu terminal, folders []string, executable str
 		if executableName != "" {
 			return []string{executableName}, nil
 		}
+	case 3:
+		return folders, nil
 	}
 	return nil, nil
 }

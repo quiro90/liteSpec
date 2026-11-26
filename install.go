@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"syscall"
 )
@@ -41,18 +40,38 @@ func installedSkillDestinations(root *os.Root) []string {
 	return installed
 }
 
-func install(root *os.Root, menu terminal, agent agent, executable string) (err error) {
-	skills, folders, err := skillChanges(agent.skills)
-	if err != nil {
-		return err
-	}
-	mode, profiles, err := agent.configure(root, menu)
-	if err != nil {
-		return err
-	}
-	ignoreEntries, err := askGitignore(root, menu, folders, executable)
-	if err != nil {
-		return err
+type agentInstallation struct {
+	agent    agent
+	mode     string
+	profiles []fileChange
+}
+
+func install(root *os.Root, menu terminal, selected []agent, executable string) (err error) {
+	var skills, allProfiles []fileChange
+	var folders, destinations []string
+	installations := make([]agentInstallation, 0, len(selected))
+	planned := make(map[string]bool)
+	for _, agent := range selected {
+		if !planned[agent.skills] {
+			changes, skillFolders, err := skillChanges(agent.skills)
+			if err != nil {
+				return err
+			}
+			planned[agent.skills] = true
+			skills = append(skills, changes...)
+			folders = append(folders, skillFolders...)
+			destinations = append(destinations, agent.skills+"/")
+		}
+		if len(selected) > 1 && agent.profiles != "" {
+			fmt.Fprintln(menu.out)
+			menu.status("◆", "#FA8072", fmt.Sprintf(menu.text("Configurando %s", "Configuring %s"), agent.name))
+		}
+		mode, profiles, err := agent.configure(root, menu)
+		if err != nil {
+			return err
+		}
+		installations = append(installations, agentInstallation{agent, mode, profiles})
+		allProfiles = append(allProfiles, profiles...)
 	}
 
 	if err := root.Mkdir(installLock, 0o755); err != nil {
@@ -70,7 +89,7 @@ func install(root *os.Root, menu terminal, agent agent, executable string) (err 
 	if _, err := checkPath(root, ".litespec", true, false, menu.language); err != nil {
 		return err
 	}
-	for _, change := range append(slices.Clone(skills), profiles...) {
+	for _, change := range append(skills, allProfiles...) {
 		if _, err := checkPath(root, change.name, false, change.remove, menu.language); err != nil {
 			return err
 		}
@@ -83,8 +102,36 @@ func install(root *os.Root, menu terminal, agent agent, executable string) (err 
 			return err
 		}
 	}
+	for _, installation := range installations {
+		if err := installation.applyProfiles(root, menu); err != nil {
+			return err
+		}
+	}
+	ignoreEntries, err := askGitignore(root, menu, destinations, folders, executable)
+	if err != nil && !errors.Is(err, installationCancelled(menu.language)) {
+		return fmt.Errorf(menu.text(
+			"instalación completada, pero no se pudo preparar la actualización de .gitignore: %w",
+			"installation completed, but the .gitignore update could not be prepared: %w",
+		), err)
+	}
+	if len(ignoreEntries) > 0 {
+		count, err := updateGitignore(root, ignoreEntries, menu.language)
+		if err != nil {
+			return fmt.Errorf(menu.text(
+				"skills instaladas, pero falló la actualización de .gitignore: %w",
+				"skills installed, but .gitignore could not be updated: %w",
+			), err)
+		}
+		fmt.Fprintf(menu.out, menu.text(".gitignore: %d reglas añadidas.\n", ".gitignore: %d rules added.\n"), count)
+	}
+	fmt.Fprintln(menu.out, menu.text("Abrí una nueva sesión del agente para aplicar el modo.", "Start a new agent session to apply the selected mode."))
+	return nil
+}
+
+func (installation agentInstallation) applyProfiles(root *os.Root, menu terminal) error {
+	agent, mode := installation.agent, installation.mode
 	var created, replaced, removed int
-	for _, change := range profiles {
+	for _, change := range installation.profiles {
 		existed, err := applyChange(root, change, menu.language)
 		if err != nil {
 			return err
@@ -98,17 +145,6 @@ func install(root *os.Root, menu terminal, agent agent, executable string) (err 
 			created++
 		}
 	}
-	if len(ignoreEntries) > 0 {
-		count, err := updateGitignore(root, ignoreEntries, menu.language)
-		if err != nil {
-			return fmt.Errorf(menu.text(
-				"skills instaladas, pero falló la actualización de .gitignore: %w",
-				"skills installed, but .gitignore could not be updated: %w",
-			), err)
-		}
-		fmt.Fprintf(menu.out, menu.text(".gitignore: %d reglas añadidas.\n", ".gitignore: %d rules added.\n"), count)
-	}
-
 	fmt.Fprintf(menu.out, menu.text("Agente: %s | Modo: %s\n", "Agent: %s | Mode: %s\n"), agent.name, mode)
 	menu.status("✓", "#64C49D", fmt.Sprintf(menu.text("Skills copiadas y verificadas en %s.", "Skills copied and verified in %s."), filepath.Join(root.Name(), agent.skills)))
 	fmt.Fprintf(menu.out, menu.text(
@@ -124,7 +160,6 @@ func install(root *os.Root, menu terminal, agent agent, executable string) (err 
 			"Configuration: %s. Check in your client that the models loaded.\n",
 		), filepath.Join(root.Name(), agent.profiles))
 	}
-	fmt.Fprintln(menu.out, menu.text("Abrí una nueva sesión del agente para aplicar el modo.", "Start a new agent session to apply the selected mode."))
 	return nil
 }
 

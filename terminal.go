@@ -31,6 +31,12 @@ func (lang language) text(es, en string) string {
 	return es
 }
 
+type installationCancelled language
+
+func (cancelled installationCancelled) Error() string {
+	return language(cancelled).text("instalación cancelada", "installation cancelled")
+}
+
 type terminal struct {
 	language
 	in          io.Reader
@@ -88,6 +94,9 @@ func (menu terminal) form(field huh.Field) error {
 	theme.Focused.Title = menu.renderer.NewStyle().Bold(true)
 	theme.Focused.Description = menu.renderer.NewStyle().Faint(true)
 	theme.Focused.SelectSelector = menu.accent().SetString("› ")
+	theme.Focused.MultiSelectSelector = theme.Focused.SelectSelector
+	theme.Focused.SelectedPrefix = menu.accent().SetString("[✓] ")
+	theme.Focused.UnselectedPrefix = menu.renderer.NewStyle().Faint(true).SetString("[ ] ")
 	theme.Focused.SelectedOption = menu.accent().Bold(true)
 	theme.Focused.TextInput.Prompt = menu.accent()
 	theme.Blurred = theme.Focused
@@ -105,7 +114,7 @@ func (menu terminal) form(field huh.Field) error {
 		err = form.Run()
 	}
 	if form.State == huh.StateAborted || errors.Is(err, huh.ErrUserAborted) {
-		return errors.New(menu.text("instalación cancelada", "installation cancelled"))
+		return installationCancelled(menu.language)
 	}
 	return err
 }
@@ -161,14 +170,10 @@ func (menu terminal) choose(title, prompt string, options []string, selected int
 			items[i] = huh.NewOption(label, i)
 		}
 		choice := max(0, selected)
-		height := min(len(options)+3, 11)
-		if menu.height > 0 {
-			height = min(height, max(4, menu.height-4))
-		}
 		field := huh.NewSelect[int]().Title(title).Description(menu.text(
 			"↑ ↓ Moverse    Enter Elegir    Esc Cancelar",
 			"↑ ↓ Move    Enter Choose    Esc Cancel",
-		)).Options(items...).Value(&choice).Filtering(false).Height(height)
+		)).Options(items...).Value(&choice).Filtering(false).Height(menu.optionsHeight(len(options)))
 		err := menu.form(field)
 		return choice, err
 	}
@@ -188,6 +193,61 @@ func (menu terminal) choose(title, prompt string, options []string, selected int
 		return 0, errors.New(invalid)
 	}
 	return index - 1, nil
+}
+
+func (menu terminal) optionsHeight(count int) int {
+	height := min(count+3, 11)
+	if menu.height > 0 {
+		height = min(height, max(4, menu.height-4))
+	}
+	return height
+}
+
+func (menu terminal) chooseAgents(options []string) ([]int, error) {
+	title := menu.text("Elegí los agentes que querés instalar", "Choose the agents to install")
+	var choices []int
+	if menu.interactive {
+		items := make([]huh.Option[int], len(options))
+		for i, label := range options {
+			items[i] = huh.NewOption(label, i)
+		}
+		field := huh.NewMultiSelect[int]().Title(title).Description(menu.text(
+			"↑ ↓ Moverse    [Espacio] Marcar    [Enter] Confirmar    [Esc] Cancelar",
+			"↑ ↓ Move    [Space] Mark    [Enter] Confirm    [Esc] Cancel",
+		)).Options(items...).Value(&choices).Filterable(false).Height(menu.optionsHeight(len(options))).
+			Validate(func(selected []int) error {
+				if len(selected) == 0 {
+					return errors.New(menu.text("Marcá al menos un agente", "Mark at least one agent"))
+				}
+				return nil
+			})
+		err := menu.form(field)
+		return choices, err
+	}
+
+	fmt.Fprintln(menu.out, title)
+	for i, option := range options {
+		fmt.Fprintf(menu.out, "%2d) %s\n", i+1, option)
+	}
+	answer, err := menu.ask(menu.text("Agentes (ej. 1,2,4)", "Agents (e.g. 1,2,4)"))
+	if err != nil {
+		return nil, err
+	}
+	selected := make([]bool, len(options))
+	for number := range strings.SplitSeq(answer, ",") {
+		number = strings.TrimSpace(number)
+		index, err := strconv.Atoi(number)
+		if err != nil || index < 1 || index > len(options) || strconv.Itoa(index) != number {
+			return nil, errors.New(menu.text("elegí uno o más números de la lista, separados por comas", "choose one or more numbers from the list, separated by commas"))
+		}
+		selected[index-1] = true
+	}
+	for index, marked := range selected {
+		if marked {
+			choices = append(choices, index)
+		}
+	}
+	return choices, nil
 }
 
 func (menu terminal) ask(label string) (string, error) {

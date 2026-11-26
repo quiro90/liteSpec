@@ -1,6 +1,6 @@
 # Shared rules
 
-Read rules once per context; reread only if changed or unavailable. Load only required references. Use available tools; no provider is required.
+Read rules once per context; reread only if changed or unavailable. Load only required references. Use available tools.
 
 Assigned workers: follow the parent assignment and applicable AGENTS.md. For an Easy implementation step use the [worker instructions](easy-worker.md). Stop reading this protocol here.
 

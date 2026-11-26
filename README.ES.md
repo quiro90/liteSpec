@@ -6,6 +6,8 @@ Especificaciones breves y claras para trabajar con agentes de IA consumiendo poc
 
 La documentación generada sigue el mismo objetivo: mínima, organizada por temas y útil para continuar sin reconstruir conversaciones.
 
+> **Experimental.** LiteSpec en su conjunto es experimental: el flujo, Adaptive, la delegación por roles y los instaladores pueden cambiar entre versiones y no están validados en todos los clientes. Revisa las specs, los cambios y las comprobaciones que produzca el agente antes de confiar en ellos.
+
 ## Flujo
 
 El instalador ofrece **Clásico** para todos los agentes y **Adaptive** para Claude Code y Codex, además de Adaptive experimental para GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal puede asignar la implementación de un paso Easy a Sonnet o Sol y retoma el control para verificarlo. [Opciones del instalador](#elección-del-modo-en-el-instalador)
@@ -67,8 +69,6 @@ Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raí
 
 El instalador crea `.litespec/` vacía si no existe y conserva su contenido si ya existe. El agente crea `specs/`, `docs/` y `archived/` según se necesiten al trabajar; el impacto documental siempre se evalúa antes de cerrar.
 
-Si actualizas una instalación anterior, reemplaza las carpetas `speclite-*` por las nuevas `litespec-*` para evitar skills duplicadas. Conserva los datos de `.liteSpec/` al adoptar el nombre `.litespec/`; en sistemas sensibles a mayúsculas son rutas distintas. El instalador no migra instalaciones anteriores.
-
 Al terminar, `si`, `sí`, `yes` o `y` confirma borrar los archivos fuente instalados y el instalador ejecutado; cualquier otra respuesta los conserva. Solo se eliminan carpetas vacías: archivos adicionales, documentación y código del proyecto se mantienen.
 
 Si ya existe un archivo `.gitignore`, al finalizar se pregunta qué excluir: **y/yes/si/s** agrega el instalador (script ejecutado y carpeta fuente) y las siete carpetas de skills de LiteSpec; **i/ins** agrega solo el instalador; cualquier otra respuesta no modifica nada. Se conservan las reglas existentes y se añaden solo las faltantes. Con Git disponible se reconocen también patrones de exclusión; sin Git se comprueban reglas literales y carpetas padre. No se crea un .gitignore nuevo ni se dejan de versionar archivos ya registrados en Git.
@@ -84,9 +84,9 @@ En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independiente
 | Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive**. En Adaptive, Easy usa el perfil configurable `litespec-easy`. Enter al crearlo selecciona `gpt-6.2-sol` en Codex o `sonnet` en Claude. |
 | Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**: roles de solo lectura `search` y `plan` para análisis en cualquier fase. Enter conserva la activación actual; en un proyecto nuevo empieza desactivada. |
 
-Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. El instalador conserva los perfiles personalizados al desactivarlos y restaurarlos. Al crear un perfil puedes configurar modelo y esfuerzo. Abre una sesión nueva para cargarlo. El antiguo rol `implement` queda retirado: cualquier ejecución para Codex o Claude Code lo mueve a `.litespec/disabled-agents/` y regenera un marcador de activación antiguo; la delegación de implementación pertenece solo a Adaptive.
+Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Modelo y esfuerzo se preguntan en cada ejecución. Abre una sesión nueva para cargarlos.
 
-**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Tras elegir el agente, el instalador solo pregunta la ejecución de pasos; los roles Auto model siguen siendo exclusivos de Codex y Claude Code. Adaptive crea el ejecutor Easy del cliente (`.github/agents/litespec-easy.agent.md`, o `litespec-easy.md` en `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` o `.qwen/agents/`) y `litespec-shared/adaptive-active.md`, un marcador que nombra al cliente e indica cómo invocar al ejecutor; los demás clientes lo ignoran. El modelo es opcional: vacío conserva el predeterminado del cliente, así que conviene indicar uno más económico para ahorrar cuota (OpenCode usa `proveedor/modelo`; Copilot en VS Code usa nombres como `Claude Sonnet 4.5 (copilot)` y Copilot CLI IDs como `claude-sonnet-4.5`). Clásico mueve ambos archivos a `.litespec/disabled-agents/<cliente>/` y una ejecución Adaptive posterior los restaura. Aún sin validar en clientes ni entornos reales (Copilot en VS Code o CLI): puede ser necesario habilitar la delegación en el cliente, y cualquier cliente puede ignorar o reemplazar el modelo pedido.
+**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Tras elegir el agente, el instalador solo pregunta la ejecución de pasos; los roles Auto model siguen siendo exclusivos de Codex y Claude Code. Adaptive crea el ejecutor Easy del cliente (`.github/agents/litespec-easy.agent.md`, o `litespec-easy.md` en `.cursor/agents/`, `.opencode/agents/`, `.gemini/agents/` o `.qwen/agents/`) y `litespec-shared/adaptive-active.md`, un marcador que nombra al cliente e indica cómo invocar al ejecutor; los demás clientes lo ignoran. El modelo es opcional: vacío conserva el predeterminado del cliente, así que conviene indicar uno más económico para ahorrar cuota (OpenCode usa `proveedor/modelo`; Copilot en VS Code usa nombres como `Claude Sonnet 4.5 (copilot)` y Copilot CLI IDs como `claude-sonnet-4.5`). Clásico borra ambos archivos. Aún sin validar en clientes ni entornos reales (Copilot en VS Code o CLI): puede ser necesario habilitar la delegación en el cliente, y cualquier cliente puede ignorar o reemplazar el modelo pedido.
 
 Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive asigna dificultad residual, responsable y revisión focalizada cuando corresponde. Apply completa las fases pendientes si se invoca directamente y despacha un paso Easy delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
 
@@ -96,9 +96,9 @@ Para comparar los modos, parte de la misma revisión con los mismos requisitos, 
 
 ### Reconfigurar perfiles
 
-Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, muévelo a `.litespec/disabled-agents/codex/` o `.litespec/disabled-agents/claude/`.
+Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. El perfil Adaptive `litespec-easy` usa los mismos campos; para desactivar Adaptive manualmente, bórralo. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
 
-Para cambiar de modo, ejecuta el instalador para el mismo cliente. Si lo borraste, copia un paquete nuevo. Para desactivar los roles manualmente, mueve el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera a `.litespec/disabled-agents/codex/` o `.litespec/disabled-agents/claude/`. Para reactivarlos, devuelve cada archivo a su ubicación original. Si hay copias activas y guardadas del mismo archivo, resuelve el duplicado antes del cambio. Después abre una sesión nueva.
+Para cambiar de modo, ejecuta el instalador para el mismo cliente. Si lo borraste, copia un paquete nuevo. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los dos perfiles que enumera. Después abre una sesión nueva.
 
 ## Licencia
 

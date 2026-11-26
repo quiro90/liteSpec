@@ -98,6 +98,7 @@ function Install-LiteSpec {
     }
 
     Write-Host "LiteSpec - proyecto: $projectRoot"
+    Write-Host 'Aviso: LiteSpec es experimental. Revisa las specs, los cambios y las verificaciones del agente antes de confiar en ellos.'
     Write-Host '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot [Clasico/Adaptive exp.]  4) Cursor [Clasico/Adaptive exp.]  5) OpenCode [Clasico/Adaptive exp.]  6) Qoder CLI  7) Gemini CLI [Clasico/Adaptive exp.]  8) Qwen Code [Clasico/Adaptive exp.]  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
     [string]$choice = Read-Host 'Agente [1-13]'
     $relative = switch (([string]$choice).Trim()) {
@@ -140,14 +141,14 @@ function Install-LiteSpec {
         throw "No es una carpeta: $dataRoot"
     }
 
-    # Collect and validate optional configuration before writing anything.
+    # Collect configuration writes and removals in order; validate all paths before writing.
+    # Each run regenerates the files for the chosen options and removes the unselected ones.
     $nativeFiles = @()
-    $legacyMarker = $null
     $agentNames = @('Codex', 'Claude Code', 'GitHub Copilot', 'Cursor', 'OpenCode', 'Qoder CLI', 'Gemini CLI', 'Qwen Code', 'Cline', 'Devin Local', 'ADE', 'Zed', 'MiniMax Code')
     $agentName = $agentNames[[int]$choice.Trim() - 1]
     $modeLabel = 'Clasico'
     $enable = $false
-    $created = 0; $restored = 0; $preserved = 0; $savedCount = 0
+    $created = 0; $replaced = 0; $removed = 0
     if ($choice.Trim() -in @('1', '2')) {
         Write-Host 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive - delegar pasos Easy'
         [string]$mode = Read-Host 'Modo [1]'
@@ -165,13 +166,11 @@ function Install-LiteSpec {
         $adapter = if ($choice.Trim() -eq '1') { 'codex' } else { 'claude' }
         $extension = if ($adapter -eq 'codex') { 'toml' } else { 'md' }
         $agentRoot = Join-Path $projectRoot ".$adapter/agents"
-        $disabledRoot = Join-Path $dataRoot "disabled-agents/$adapter"
-        # Remove the marker first when disabling and install it last when enabling.
-        # The retired implement role is only ever moved out of the active directory.
-        $roles = if ($enable) { @('implement', 'search', 'plan', '') } else { @('', 'implement', 'search', 'plan') }
+        # Remove the marker first when disabling and write it last when enabling.
+        $roles = if ($enable) { @('search', 'plan', '') } else { @('', 'search', 'plan') }
         $roles += 'easy'
         foreach ($role in $roles) {
-            $enable = if ($role -eq 'easy') { $adaptive } elseif ($role -eq 'implement') { $false } else { $roleMode }
+            $enable = if ($role -eq 'easy') { $adaptive } else { $roleMode }
             if ($role) {
                 $name = "litespec-$role.$extension"
                 $active = Join-Path $agentRoot $name
@@ -182,37 +181,16 @@ function Install-LiteSpec {
             if (-not $enable -and -not (Get-Item -LiteralPath $active -Force -ErrorAction SilentlyContinue)) {
                 continue
             }
-            $saved = Join-Path $disabledRoot $name
-            foreach ($path in @($active, $saved)) {
-                Assert-LocalPath $path
-                if ((Test-Path -LiteralPath $path) -and -not (Test-Path -LiteralPath $path -PathType Leaf)) {
-                    throw "No es un archivo: $path"
-                }
+            Assert-LocalPath $active
+            if ((Test-Path -LiteralPath $active) -and -not (Test-Path -LiteralPath $active -PathType Leaf)) {
+                throw "No es un archivo: $active"
             }
-            $hasActive = Test-Path -LiteralPath $active
-            $hasSaved = Test-Path -LiteralPath $saved
-            if ($hasActive -and $hasSaved) { throw "Existen ambas configuraciones: $active y $saved. Revisa cual conservar." }
             if (-not $enable) {
-                if ($hasActive) { $nativeFiles += @{ Path = $saved; Source = $active; Restore = $false } }
-                continue
-            }
-            # A marker from an older release names the retired implement role: regenerate it.
-            if (-not $role) {
-                foreach ($path in @($active, $saved)) {
-                    if ((Test-Path -LiteralPath $path -PathType Leaf) -and ([System.IO.File]::ReadAllText($path) -match 'litespec-implement')) { $legacyMarker = $path }
-                }
-            }
-            if ($hasActive -and $legacyMarker -ne $active) {
-                $preserved++
-                Write-Host "Se conserva: $active"
-                continue
-            }
-            if ($hasSaved -and $legacyMarker -ne $saved) {
-                $nativeFiles += @{ Path = $active; Source = $saved; Restore = $true }
+                $nativeFiles += @{ Path = $active; Remove = $true }
                 continue
             }
             if (-not $role) {
-                $content = "# Experimental - native delegation enabled`nAdapter: $adapter. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings.`n"
+                $content = "Native delegation active.`nAdapter: $adapter. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan}.$extension. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization.`n"
             } else {
                 $defaultModel = if ($role -ne 'easy') { '' } elseif ($adapter -eq 'codex') { 'gpt-6.2-sol' } else { 'sonnet' }
                 [string]$model = Read-Host "$role - modelo [$defaultModel]"
@@ -264,8 +242,7 @@ function Install-LiteSpec {
         }[$choice.Trim()]
         $adapter = $spec[0]; $agentDir = $spec[1]; $easyFile = $spec[2]; $invoke = $spec[3]
         $agentRoot = Join-Path $projectRoot $agentDir
-        $disabledRoot = Join-Path $dataRoot "disabled-agents/$adapter"
-        # Install the worker before the marker; remove the marker before the worker.
+        # Write the worker before the marker; remove the marker before the worker.
         $targets = @(
             @{ Name = $easyFile; Active = (Join-Path $agentRoot $easyFile) },
             @{ Name = 'adaptive-active.md'; Active = (Join-Path $destination 'litespec-shared/adaptive-active.md') }
@@ -275,31 +252,16 @@ function Install-LiteSpec {
             $name = $target.Name
             $active = $target.Active
             if (-not $adaptive -and -not (Get-Item -LiteralPath $active -Force -ErrorAction SilentlyContinue)) { continue }
-            $saved = Join-Path $disabledRoot $name
-            foreach ($path in @($active, $saved)) {
-                Assert-LocalPath $path
-                if ((Test-Path -LiteralPath $path) -and -not (Test-Path -LiteralPath $path -PathType Leaf)) {
-                    throw "No es un archivo: $path"
-                }
+            Assert-LocalPath $active
+            if ((Test-Path -LiteralPath $active) -and -not (Test-Path -LiteralPath $active -PathType Leaf)) {
+                throw "No es un archivo: $active"
             }
-            $hasActive = Test-Path -LiteralPath $active
-            $hasSaved = Test-Path -LiteralPath $saved
-            if ($hasActive -and $hasSaved) { throw "Existen ambas configuraciones: $active y $saved. Revisa cual conservar." }
             if (-not $adaptive) {
-                if ($hasActive) { $nativeFiles += @{ Path = $saved; Source = $active; Restore = $false } }
-                continue
-            }
-            if ($hasActive) {
-                $preserved++
-                Write-Host "Se conserva: $active"
-                continue
-            }
-            if ($hasSaved) {
-                $nativeFiles += @{ Path = $active; Source = $saved; Restore = $true }
+                $nativeFiles += @{ Path = $active; Remove = $true }
                 continue
             }
             if ($name -eq 'adaptive-active.md') {
-                $content = "# Experimental - Adaptive execution enabled`nClient: $agentName. Easy worker: $agentDir/$easyFile. Only $agentName uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Model support is not validated by installation; if the worker is unavailable, follow adaptive-apply.md.`n"
+                $content = "Adaptive active.`nClient: $agentName. Easy worker: $agentDir/$easyFile. Only $agentName uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Do not assume the requested model is applied; if the worker is unavailable, follow adaptive-apply.md.`n"
             } else {
                 if ($adapter -eq 'copilot') { Write-Host 'Copilot: VS Code usa nombres como "Claude Sonnet 4.5 (copilot)"; Copilot CLI usa IDs como "claude-sonnet-4.5".' }
                 [string]$model = Read-Host 'easy - modelo [vacio = predeterminado del cliente]'
@@ -337,25 +299,23 @@ function Install-LiteSpec {
         }
     }
     [System.IO.Directory]::CreateDirectory($dataRoot) | Out-Null
-    if ($legacyMarker) { Assert-LocalPath $legacyMarker; Remove-Item -LiteralPath $legacyMarker }
+    # Only the exact configuration files listed above are replaced or removed.
     foreach ($native in $nativeFiles) {
         Assert-LocalPath $native.Path
-        [System.IO.Directory]::CreateDirectory((Split-Path -Parent $native.Path)) | Out-Null
-        if ($native.ContainsKey('Source')) {
-            Assert-LocalPath $native.Source
-            [System.IO.File]::Move($native.Source, $native.Path)
-            if ($native.Restore) { $restored++ } else { $savedCount++ }
+        if ($native.ContainsKey('Remove')) {
+            if (Test-Path -LiteralPath $native.Path -PathType Leaf) { Remove-Item -LiteralPath $native.Path; $removed++ }
             continue
         }
+        [System.IO.Directory]::CreateDirectory((Split-Path -Parent $native.Path)) | Out-Null
+        if (Test-Path -LiteralPath $native.Path -PathType Leaf) { Remove-Item -LiteralPath $native.Path; $replaced++ } else { $created++ }
         $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($native.Content)
         $stream = [System.IO.File]::Open($native.Path, [System.IO.FileMode]::CreateNew)
         try { $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
         if ([System.IO.File]::ReadAllText($native.Path) -cne $native.Content) { throw "Fallo la verificacion: $($native.Path)" }
-        $created++
     }
     Write-Host "Agente: $agentName | Modo: $modeLabel"
     Write-Host "Skills copiadas y verificadas en $destination."
-    Write-Host "Archivos de configuracion: creados=$created; restaurados=$restored; conservados=$preserved; guardados=$savedCount."
+    Write-Host "Archivos de configuracion: creados=$created; reemplazados=$replaced; eliminados=$removed."
     if ($choice.Trim() -eq '12') { Write-Host 'Zed usa el flujo normal; cualquier configuracion de Codex se conserva y solo aplica en Codex.' }
     if ($modeLabel -ne 'Clasico') { Write-Host "Configuracion: $agentRoot. Modelos no comprobados en ejecucion; confirma su carga en el cliente." }
     Write-Host 'Abre una nueva sesion del agente para aplicar el modo.'

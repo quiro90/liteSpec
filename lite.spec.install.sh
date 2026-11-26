@@ -96,6 +96,7 @@ main() {
         fi
     done
     printf 'LiteSpec - proyecto: %s\n' "$project_root"
+    printf '%s\n' 'Aviso: LiteSpec es experimental. Revisa las specs, los cambios y las verificaciones del agente antes de confiar en ellos.'
     printf '%s\n' '1) Codex [Clasico/Adaptive]  2) Claude Code [Clasico/Adaptive]  3) GitHub Copilot [Clasico/Adaptive exp.]  4) Cursor [Clasico/Adaptive exp.]  5) OpenCode [Clasico/Adaptive exp.]  6) Qoder CLI  7) Gemini CLI [Clasico/Adaptive exp.]  8) Qwen Code [Clasico/Adaptive exp.]  9) Cline  10) Devin Local  11) ADE  12) Zed  13) MiniMax Code'
     read -r -p 'Agente [1-13]: ' choice || return 1
     case "$choice" in
@@ -137,13 +138,14 @@ main() {
         printf 'No es una carpeta: %s\n' "$data_root" >&2
         return 1
     fi
-    # Collect optional files in memory; validate all paths before writing.
+    # Collect configuration writes and removals in order; validate all paths before writing.
+    # Each run regenerates the files for the chosen options and removes the unselected ones.
     # A sentinel avoids empty-array nounset behavior in older Bash releases.
-    local native_paths=('') native_contents=('') native_sources=('') roles=() legacy_marker=''
-    local mode adapter extension agent_root disabled_root role name model effort description instructions content active saved i
+    local native_paths=('') native_contents=('') native_removes=('') roles=()
+    local mode adapter extension agent_root role name model effort description instructions content active i
     local agent_names=('Codex' 'Claude Code' 'GitHub Copilot' 'Cursor' 'OpenCode' 'Qoder CLI' 'Gemini CLI' 'Qwen Code' 'Cline' 'Devin Local' 'ADE' 'Zed' 'MiniMax Code')
     local agent_name=${agent_names[$((choice-1))]} mode_label=Clasico
-    local created=0 restored=0 preserved=0 saved_count=0
+    local created=0 replaced=0 removed=0
     if [[ "$choice" == 1 || "$choice" == 2 ]]; then
         printf '%s\n' 'Ejecucion de pasos: 1) Clasico [predeterminado]  2) Adaptive - delegar pasos Easy'
         read -r -p 'Modo [1]: ' mode || return 1
@@ -155,15 +157,12 @@ main() {
         case "${role_choice:-$role_default}" in 1) ;; 2) role_mode=1; mode_label+=' + Auto model' ;; *) printf '%s\n' 'Opcion de roles invalida.' >&2; return 1 ;; esac
         if [[ "$choice" == 1 ]]; then adapter=codex; extension=toml; else adapter=claude; extension=md; fi
         agent_root="$project_root/.$adapter/agents"
-        disabled_root="$data_root/disabled-agents/$adapter"
-        # Remove the marker first when disabling and install it last when enabling.
-        # The retired implement role is only ever moved out of the active directory.
-        if [[ "$role_mode" == 1 ]]; then roles=(implement search plan ''); else roles=('' implement search plan); fi
+        # Remove the marker first when disabling and write it last when enabling.
+        if [[ "$role_mode" == 1 ]]; then roles=(search plan ''); else roles=('' search plan); fi
         roles+=(easy)
         for role in "${roles[@]}"; do
             enable=$role_mode
             if [[ "$role" == easy ]]; then enable=$adaptive; fi
-            if [[ "$role" == implement ]]; then enable=0; fi
             if [[ -n "$role" ]]; then
                 name="litespec-$role.$extension"
                 active="$agent_root/$name"
@@ -174,45 +173,19 @@ main() {
             if [[ "$enable" != 1 && ! -e "$active" && ! -L "$active" ]]; then
                 continue
             fi
-            saved="$disabled_root/$name"
-            for path in "$active" "$saved"; do
-                assert_local_path "$path"
-                if [[ -e "$path" && ! -f "$path" ]]; then
-                    printf 'No es un archivo: %s\n' "$path" >&2
-                    return 1
-                fi
-            done
-            if [[ -e "$active" && -e "$saved" ]]; then
-                printf 'Existen ambas configuraciones: %s y %s. Revisa cual conservar.\n' "$active" "$saved" >&2
+            assert_local_path "$active"
+            if [[ -e "$active" && ! -f "$active" ]]; then
+                printf 'No es un archivo: %s\n' "$active" >&2
                 return 1
             fi
             if [[ "$enable" != 1 ]]; then
-                if [[ -e "$active" ]]; then
-                    native_paths+=("$saved")
-                    native_sources+=("$active")
-                    native_contents+=('')
-                fi
-                continue
-            fi
-            # A marker from an older release names the retired implement role: regenerate it.
-            if [[ -z "$role" ]]; then
-                for path in "$active" "$saved"; do
-                    if [[ -f "$path" ]] && grep -q 'litespec-implement' -- "$path"; then legacy_marker=$path; fi
-                done
-            fi
-            if [[ -e "$active" && "$legacy_marker" != "$active" ]]; then
-                preserved=$((preserved+1))
-                printf 'Se conserva: %s\n' "$active"
-                continue
-            fi
-            if [[ -e "$saved" && "$legacy_marker" != "$saved" ]]; then
                 native_paths+=("$active")
-                native_sources+=("$saved")
                 native_contents+=('')
+                native_removes+=(1)
                 continue
             fi
             if [[ -z "$role" ]]; then
-                content=$'# Experimental - native delegation enabled\n'"Adapter: $adapter. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan}.$extension. Model/effort support is not validated by installation. On failure inform and continue with current agent within authorization. No guaranteed token savings."$'\n'
+                content=$'Native delegation active.\n'"Adapter: $adapter. Use litespec-search and litespec-plan when useful under delegation.md. Native definitions: .$adapter/agents/litespec-{search,plan}.$extension. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization."$'\n'
             else
                 default_model=''
                 if [[ "$role" == easy ]]; then
@@ -250,8 +223,8 @@ main() {
                 fi
             fi
             native_paths+=("$active")
-            native_sources+=('')
             native_contents+=("$content")
+            native_removes+=('')
         done
     elif [[ "$choice" == 3 || "$choice" == 4 || "$choice" == 5 || "$choice" == 7 || "$choice" == 8 ]]; then
         # Experimental Adaptive for other clients: an Easy worker plus a marker naming this client.
@@ -271,8 +244,7 @@ main() {
             8) adapter=qwen; agent_dir=.qwen/agents; invoke='through native subagent delegation' ;;
         esac
         agent_root="$project_root/$agent_dir"
-        disabled_root="$data_root/disabled-agents/$adapter"
-        # Install the worker before the marker; remove the marker before the worker.
+        # Write the worker before the marker; remove the marker before the worker.
         if [[ "$adaptive" == 1 ]]; then targets=(easy marker); else targets=(marker easy); fi
         for target in "${targets[@]}"; do
             if [[ "$target" == easy ]]; then
@@ -285,39 +257,19 @@ main() {
             if [[ "$adaptive" != 1 && ! -e "$active" && ! -L "$active" ]]; then
                 continue
             fi
-            saved="$disabled_root/$name"
-            for path in "$active" "$saved"; do
-                assert_local_path "$path"
-                if [[ -e "$path" && ! -f "$path" ]]; then
-                    printf 'No es un archivo: %s\n' "$path" >&2
-                    return 1
-                fi
-            done
-            if [[ -e "$active" && -e "$saved" ]]; then
-                printf 'Existen ambas configuraciones: %s y %s. Revisa cual conservar.\n' "$active" "$saved" >&2
+            assert_local_path "$active"
+            if [[ -e "$active" && ! -f "$active" ]]; then
+                printf 'No es un archivo: %s\n' "$active" >&2
                 return 1
             fi
             if [[ "$adaptive" != 1 ]]; then
-                if [[ -e "$active" ]]; then
-                    native_paths+=("$saved")
-                    native_sources+=("$active")
-                    native_contents+=('')
-                fi
-                continue
-            fi
-            if [[ -e "$active" ]]; then
-                preserved=$((preserved+1))
-                printf 'Se conserva: %s\n' "$active"
-                continue
-            fi
-            if [[ -e "$saved" ]]; then
                 native_paths+=("$active")
-                native_sources+=("$saved")
                 native_contents+=('')
+                native_removes+=(1)
                 continue
             fi
             if [[ "$target" == marker ]]; then
-                content="# Experimental - Adaptive execution enabled"$'\n'"Client: $agent_name. Easy worker: $agent_dir/$easy_file. Only $agent_name uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Model support is not validated by installation; if the worker is unavailable, follow adaptive-apply.md."$'\n'
+                content="Adaptive active."$'\n'"Client: $agent_name. Easy worker: $agent_dir/$easy_file. Only $agent_name uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-easy subagent $invoke. Do not assume the requested model is applied; if the worker is unavailable, follow adaptive-apply.md."$'\n'
             else
                 if [[ "$adapter" == copilot ]]; then printf '%s\n' 'Copilot: VS Code usa nombres como "Claude Sonnet 4.5 (copilot)"; Copilot CLI usa IDs como "claude-sonnet-4.5".'; fi
                 read -r -p 'easy - modelo [vacio = predeterminado del cliente]: ' model || return 1
@@ -339,8 +291,8 @@ main() {
                 content+=$'---\n\n'"Follow $relative/litespec-shared/easy-worker.md for the assigned step. Do not delegate."$'\n'
             fi
             native_paths+=("$active")
-            native_sources+=('')
             native_contents+=("$content")
+            native_removes+=('')
         done
     fi
     mkdir -p -- "$destination"
@@ -352,28 +304,22 @@ main() {
         cmp -s -- "$source_root/$file" "$destination/$file"
     done
     mkdir -p -- "$data_root"
-    if [[ -n "$legacy_marker" ]]; then assert_local_path "$legacy_marker"; rm -- "$legacy_marker"; fi
+    # Only the exact configuration files listed above are replaced or removed.
     for ((i=1; i<${#native_paths[@]}; i++)); do
         path=${native_paths[$i]}
         assert_local_path "$path"
-        mkdir -p -- "$(dirname -- "$path")"
-        if [[ -n "${native_sources[$i]}" ]]; then
-            assert_local_path "${native_sources[$i]}"
-            mv -n -- "${native_sources[$i]}" "$path"
-            if [[ -e "${native_sources[$i]}" || ! -f "$path" ]]; then
-                printf 'No se pudo mover la configuracion a %s\n' "$path" >&2
-                return 1
-            fi
-            if [[ "$path" != "$disabled_root/"* ]]; then restored=$((restored+1)); else saved_count=$((saved_count+1)); fi
+        if [[ -n "${native_removes[$i]}" ]]; then
+            if [[ -f "$path" ]]; then rm -- "$path"; removed=$((removed+1)); fi
             continue
         fi
+        mkdir -p -- "$(dirname -- "$path")"
+        if [[ -f "$path" ]]; then rm -- "$path"; replaced=$((replaced+1)); else created=$((created+1)); fi
         (set -o noclobber; printf '%s' "${native_contents[$i]}" > "$path")
         if ! printf '%s' "${native_contents[$i]}" | cmp -s - "$path"; then printf 'Fallo la verificacion: %s\n' "$path" >&2; return 1; fi
-        created=$((created+1))
     done
     printf 'Agente: %s | Modo: %s\n' "$agent_name" "$mode_label"
     printf 'Skills copiadas y verificadas en %s.\n' "$destination"
-    printf 'Archivos de configuracion: creados=%s; restaurados=%s; conservados=%s; guardados=%s.\n' "$created" "$restored" "$preserved" "$saved_count"
+    printf 'Archivos de configuracion: creados=%s; reemplazados=%s; eliminados=%s.\n' "$created" "$replaced" "$removed"
     if [[ "$choice" == 12 ]]; then printf '%s\n' 'Zed usa el flujo normal; cualquier configuracion de Codex se conserva y solo aplica en Codex.'; fi
     if [[ "$mode_label" != Clasico ]]; then printf 'Configuracion: %s. Modelos no comprobados en ejecucion; confirma su carga en el cliente.\n' "$agent_root"; fi
     printf '%s\n' 'Abre una nueva sesion del agente para aplicar el modo.'

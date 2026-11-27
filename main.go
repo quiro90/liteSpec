@@ -14,7 +14,7 @@ import (
 //go:embed lite.spec.steps/litespec-*/SKILL.md lite.spec.steps/litespec-shared/*.md
 var packageFiles embed.FS
 
-var version = "v0.1.3"
+var version = "v0.1.4"
 
 const usage = "litespec [init [--project <path>] [--lang es|en] [--plain]] | litespec --version"
 

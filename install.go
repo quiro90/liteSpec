@@ -184,8 +184,14 @@ func skillChanges(destination string) ([]fileChange, []string, error) {
 		}
 		return err
 	})
+	for _, name := range retiredSkillFiles {
+		changes = append(changes, fileChange{name: path.Join(destination, name), remove: true})
+	}
 	return changes, folders, err
 }
+
+// Package files from earlier versions that a reinstall removes.
+var retiredSkillFiles = []string{"litespec-shared/easy-worker.md"}
 
 // Walk each component so existing links (including Windows junctions) are
 // rejected even if their targets are inside the project.

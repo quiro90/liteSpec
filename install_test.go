@@ -150,10 +150,10 @@ func TestNumberedEnglishInstaller(t *testing.T) {
 		t.Fatalf("%v\n%s", err, output.String())
 	}
 	for _, message := range []string{"First installation in this project.", "Classic / Experimental Adaptive",
-		"Step execution", "Experimental Adaptive · Delegate simple steps", "Internal skill delegation",
-		"Adaptive groups spec steps by impact and complexity", "Suggested parent · Medium gpt-6.2-sol / Hard gpt-6.2-astra",
-		"Very Easy · Execution - model [Enter = gpt-6-luna]", "Easy · Execution - model [Enter = gpt-6.2-sol]",
-		"Easy · Execution - optional effort [Enter = medium]",
+		"Step execution", "Experimental Adaptive · Delegate Easy and Medium steps", "Internal skill delegation",
+		"Medium: defined logic with a check.", "Workers · Easy gpt-6-luna / Medium gpt-6.2-sol", "Suggested parent · Hard gpt-6.2-astra",
+		"Easy · Execution - model [Enter = gpt-6-luna]", "Medium · Execution - model [Enter = gpt-6.2-sol]",
+		"Medium · Execution - optional effort [Enter = medium]",
 		"Agent: Codex | Mode: Experimental Adaptive", "7 rules added."} {
 		if !strings.Contains(output.String(), message) {
 			t.Errorf("missing %q in output:\n%s", message, output.String())
@@ -162,7 +162,7 @@ func TestNumberedEnglishInstaller(t *testing.T) {
 	if strings.Contains(output.String(), "\x1b") || strings.Contains(output.String(), "Idioma / Language") {
 		t.Fatalf("plain mode should use the original input sequence:\n%s", output.String())
 	}
-	readProject(t, project, ".codex/agents/litespec-easy.toml")
+	readProject(t, project, ".codex/agents/litespec-medium.toml")
 }
 
 func TestArrowSelectorUsesTheHighlightedOption(t *testing.T) {
@@ -267,8 +267,8 @@ func TestInstallsMultipleAgentsWithOneGitignorePrompt(t *testing.T) {
 	}
 	readProject(t, project, ".agents/skills/litespec-explore/SKILL.md")
 	readProject(t, project, ".claude/skills/litespec-explore/SKILL.md")
-	readProject(t, project, ".claude/agents/litespec-easy.md")
-	expectMissing(t, project, ".codex/agents/litespec-easy.toml")
+	readProject(t, project, ".claude/agents/litespec-medium.md")
+	expectMissing(t, project, ".codex/agents/litespec-medium.toml")
 	ignored := readProject(t, project, ".gitignore")
 	if strings.Count(ignored, "/.agents/skills/litespec-explore/\n") != 1 ||
 		strings.Count(ignored, "/.claude/skills/litespec-explore/\n") != 1 || strings.Contains(ignored, ".cursor/") {
@@ -285,13 +285,13 @@ func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 		{".codex/agents/litespec-search.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
 		{".codex/agents/litespec-plan.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
 		{".codex/agents/litespec-research.toml", `model = "gpt-6.2-astra"`, `model_reasoning_effort = "medium"`},
-		{".codex/agents/litespec-very-easy.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
-		{".codex/agents/litespec-easy.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
+		{".codex/agents/litespec-easy.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
+		{".codex/agents/litespec-medium.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
 		{".claude/agents/litespec-search.md", "model: 'haiku'", "effort: medium"},
 		{".claude/agents/litespec-plan.md", "model: 'sonnet'", "effort: medium"},
 		{".claude/agents/litespec-research.md", "model: 'opus'", "effort: medium"},
-		{".claude/agents/litespec-very-easy.md", "model: 'haiku'", "effort: medium"},
-		{".claude/agents/litespec-easy.md", "model: 'sonnet'", "effort: medium"},
+		{".claude/agents/litespec-easy.md", "model: 'haiku'", "effort: medium"},
+		{".claude/agents/litespec-medium.md", "model: 'sonnet'", "effort: medium"},
 	} {
 		content := readProject(t, project, profile.file)
 		if !strings.Contains(content, profile.model) || !strings.Contains(content, profile.effort) {
@@ -303,7 +303,7 @@ func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 		"Indexación - modelo [Enter = gpt-6-luna]",
 		"Indexación - esfuerzo opcional [Enter = medium]",
 		"Investigación compleja - modelo [Enter = opus]",
-		"Principal sugerido · Media sonnet / Difícil opus",
+		"Ejecutores · Fácil haiku / Medio sonnet", "Principal sugerido · Difícil opus",
 	} {
 		if !strings.Contains(output, message) {
 			t.Errorf("missing %q in output:\n%s", message, output)
@@ -311,12 +311,12 @@ func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 	}
 
 	invoke(t, project, "", "1,2\n2\n1\n\n\ninherit\ninherit\n2\n1\n\n\nsonnet[1m]\nHIGH\n")
-	codex := readProject(t, project, ".codex/agents/litespec-easy.toml")
+	codex := readProject(t, project, ".codex/agents/litespec-medium.toml")
 	if strings.Contains(codex, "\nmodel =") || strings.Contains(codex, "\nmodel_reasoning_effort =") {
 		t.Errorf("expected Codex to inherit both settings:\n%s", codex)
 	}
 
-	claude := readProject(t, project, ".claude/agents/litespec-easy.md")
+	claude := readProject(t, project, ".claude/agents/litespec-medium.md")
 	if !strings.Contains(claude, "model: 'sonnet[1m]'") || !strings.Contains(claude, "effort: high") {
 		t.Errorf("expected the model and effort overrides in Claude Code:\n%s", claude)
 	}
@@ -332,8 +332,8 @@ func TestNativeProfilesAndReconfiguration(t *testing.T) {
 		t.Run(test.profileDir, func(t *testing.T) {
 			project := t.TempDir()
 			marker := test.destination + "/litespec-shared/delegation-active.md"
+			medium := test.profileDir + "/litespec-medium" + test.extension
 			easy := test.profileDir + "/litespec-easy" + test.extension
-			veryEasy := test.profileDir + "/litespec-very-easy" + test.extension
 			search := test.profileDir + "/litespec-search" + test.extension
 			plan := test.profileDir + "/litespec-plan" + test.extension
 			research := test.profileDir + "/litespec-research" + test.extension
@@ -342,13 +342,13 @@ func TestNativeProfilesAndReconfiguration(t *testing.T) {
 			output := invoke(t, project, "", test.choice+"\n2\n2\nsearch-model\nlow\nplan-model\n\nresearch-model\n\n\n\n\nhigh\n")
 			if !strings.Contains(output, "creados=6; reemplazados=0; eliminados=0") ||
 				!strings.Contains(output, "Clásico / Adaptive experimental") ||
-				!strings.Contains(output, "Adaptive experimental · Delegar pasos simples") ||
+				!strings.Contains(output, "Adaptive experimental · Delegar pasos fáciles y medios") ||
 				!strings.Contains(readProject(t, project, search), "search-model") ||
 				!strings.Contains(readProject(t, project, plan), "plan-model") ||
 				!strings.Contains(readProject(t, project, research), "research-model") {
 				t.Fatal(output)
 			}
-			worker := readProject(t, project, easy)
+			worker := readProject(t, project, medium)
 			if !strings.Contains(worker, test.model) || !strings.Contains(worker, test.effort) {
 				t.Fatal(worker)
 			}
@@ -358,7 +358,7 @@ func TestNativeProfilesAndReconfiguration(t *testing.T) {
 			}
 			if test.choice == "1" {
 				invoke(t, project, "", "12\n")
-				if readProject(t, project, marker) != previousMarker || readProject(t, project, easy) != worker {
+				if readProject(t, project, marker) != previousMarker || readProject(t, project, medium) != worker {
 					t.Fatal("Zed changed Codex configuration")
 				}
 			}
@@ -368,8 +368,8 @@ func TestNativeProfilesAndReconfiguration(t *testing.T) {
 				!strings.Contains(readProject(t, project, search), "new-model") {
 				t.Fatal(output)
 			}
+			expectMissing(t, project, medium)
 			expectMissing(t, project, easy)
-			expectMissing(t, project, veryEasy)
 			output = invoke(t, project, "", test.choice+"\n1\n1\n")
 			if !strings.Contains(output, "creados=0; reemplazados=0; eliminados=4") {
 				t.Fatal(output)
@@ -388,11 +388,11 @@ func TestExperimentalProfiles(t *testing.T) {
 	for _, test := range []struct {
 		choice, client, prefix, worker, model, extra, defaultModel string
 	}{
-		{"3", "GitHub Copilot", ".github", "litespec-easy.agent.md", "Claude Sonnet 4.5 (copilot)", "name: litespec-easy", ""},
-		{"4", "Cursor", ".cursor", "litespec-easy.md", "sonnet[thinking=on,effort=medium]", "name: litespec-easy", "composer-2.5[]"},
-		{"5", "OpenCode", ".opencode", "litespec-easy.md", "provider/model#variant", "mode: subagent", "anthropic/claude-haiku-4-5"},
-		{"7", "Gemini CLI", ".gemini", "litespec-easy.md", "gemini-model", "kind: local", "flash"},
-		{"8", "Qwen Code", ".qwen", "litespec-easy.md", "provider/model", "name: litespec-easy", ""},
+		{"3", "GitHub Copilot", ".github", "litespec-executor.agent.md", "Claude Sonnet 4.5 (copilot)", "name: litespec-executor", ""},
+		{"4", "Cursor", ".cursor", "litespec-executor.md", "sonnet[thinking=on,effort=medium]", "name: litespec-executor", "composer-2.5[]"},
+		{"5", "OpenCode", ".opencode", "litespec-executor.md", "provider/model#variant", "mode: subagent", "anthropic/claude-haiku-4-5"},
+		{"7", "Gemini CLI", ".gemini", "litespec-executor.md", "gemini-model", "kind: local", "flash"},
+		{"8", "Qwen Code", ".qwen", "litespec-executor.md", "provider/model", "name: litespec-executor", ""},
 	} {
 		t.Run(test.client, func(t *testing.T) {
 			project := t.TempDir()
@@ -410,7 +410,7 @@ func TestExperimentalProfiles(t *testing.T) {
 			}
 			output := invoke(t, project, "", test.choice+"\n2\n\n")
 			profile = readProject(t, project, worker)
-			if !strings.Contains(output, "Adaptive agrupa los pasos de la spec por impacto y complejidad.") {
+			if !strings.Contains(output, "Fácil y medio - modelo compartido") {
 				t.Fatal(output)
 			}
 			if test.defaultModel != "" {
@@ -430,6 +430,32 @@ func TestExperimentalProfiles(t *testing.T) {
 			expectMissing(t, project, worker)
 			expectMissing(t, project, marker)
 		})
+	}
+}
+
+func TestReinstallRemovesRetiredFiles(t *testing.T) {
+	project := t.TempDir()
+	retired := []string{
+		".claude/agents/litespec-very-easy.md",
+		".claude/skills/litespec-shared/easy-worker.md",
+		".cursor/agents/litespec-easy.md",
+		".cursor/skills/litespec-shared/easy-worker.md",
+	}
+	for _, name := range retired {
+		saveProject(t, project, name, "previous version")
+	}
+	saveProject(t, project, ".claude/agents/unrelated.md", "other profile")
+	invoke(t, project, "", "2\n2\n1\n"+strings.Repeat("\n", 4))
+	invoke(t, project, "", "4\n2\n\n")
+	for _, name := range retired {
+		expectMissing(t, project, name)
+	}
+	readProject(t, project, ".claude/agents/litespec-easy.md")
+	readProject(t, project, ".claude/agents/litespec-medium.md")
+	readProject(t, project, ".claude/skills/litespec-shared/executor.md")
+	readProject(t, project, ".cursor/agents/litespec-executor.md")
+	if readProject(t, project, ".claude/agents/unrelated.md") != "other profile" {
+		t.Fatal("unrelated profile was changed")
 	}
 }
 

@@ -66,7 +66,7 @@ GitHub Actions runs `go test` and `go vet` on Windows, macOS, and Linux. Once al
 
 ## Workflow
 
-The installer offers **Classic** for all agents and **Experimental Adaptive** for Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code. Adaptive is still in early testing across all supported clients. In both modes a step delivers a verifiable outcome. In Adaptive the parent groups steps by impact and complexity, delegates eligible steps to lighter models and verifies the results. [Installer options](#choosing-execution-mode)
+The installer offers **Classic** for all agents and **Experimental Adaptive** for Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI and Qwen Code. Adaptive is still in early testing across all supported clients. In both modes a step delivers a verifiable outcome. In Adaptive the parent splits independently checkable work, delegates Easy and Medium steps and verifies the results. [Installer options](#choosing-execution-mode)
 
 1. **Explore:** inspect relevant context and confirm the goal and scope.
 2. **Propose:** prepare `spec.md` as an index and steps with context, tasks, and checks. A small change can use a single file.
@@ -127,7 +127,7 @@ You can install LiteSpec for multiple agents in one run. The installer asks for 
 
 Zed Agent requires a trusted project and shares this destination with Codex. Auto model applies only in the client named by its marker; Zed keeps the normal workflow and preserves Codex configuration. For external agents inside Zed, select their own installer option. ADE uses project skills here, not its bundled resources/agent-skills directory.
 
-The six skills and shared rules are copied. LICENSE stays at the repository root. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, `verification.md` when checking results, `documentation.md` when consolidating living docs, and `closure.md` when archiving. In Adaptive, `adaptive-plan.md` when classifying steps, `adaptive-apply.md` when executing them and `easy-worker.md` for the Easy worker; `serial.md` only when `.litespec/serial/` exists. Do not load the entire folder by default. Reinstallation replaces only the listed package files in the seven LiteSpec folders; extra files and other skills are preserved. Destination links or file/directory conflicts stop installation before replacement.
+The six skills and shared rules are copied. LICENSE stays at the repository root. Rules load as needed: `protocol.md` for all skills, `specification.md` when defining specifications, `revision.md` when revising changes, `verification.md` when checking results, `documentation.md` when consolidating living docs, and `closure.md` when archiving. In Adaptive, `adaptive-plan.md` when classifying steps, `adaptive-apply.md` when executing them and `executor.md` for the Easy and Medium workers; `serial.md` only when `.litespec/serial/` exists. Do not load the entire folder by default. Reinstallation replaces only the listed package files in the seven LiteSpec folders; extra files and other skills are preserved. Destination links or file/directory conflicts stop installation before replacement.
 
 The installer creates an empty `.litespec/` if missing and preserves its contents if present. The agent creates `specs/`, `docs/`, and `archived/` as needed during work; documentation impact is always assessed before closure.
 
@@ -141,14 +141,14 @@ Codex and Claude Code offer two independent choices after agent selection.
 
 | Setting | Options |
 |---|---|
-| Step execution | **1 Classic** (Enter) or **2 Experimental Adaptive**. In Adaptive, eligible Very Easy and Easy steps can go to their own workers. The parent handles Medium and Hard steps. |
+| Step execution | **1 Classic** (Enter) or **2 Experimental Adaptive**. In Adaptive, Easy steps (mechanical: commands, named values, an existing pattern) and Medium steps (real logic, fully specified, with a check that demonstrates the result) go to their workers. The parent keeps Hard steps: open decisions, a measurement before design or an undefined integration contract. |
 | Internal skill delegation | **1 Disabled** or **2 Auto model by role**. The parent drafts the specs and can delegate indexing, bounded analysis and complex research to read-only roles. Enter keeps the current role activation, initially disabled in a new project. |
 
 Qoder CLI, Cline, Devin Local, ADE, Zed and MiniMax Code use Classic. Each installer run regenerates the configuration files for the chosen options and deletes those no longer selected; it touches only those exact files, so manual edits to them are replaced and other agents are preserved. Model and effort are asked on each run. Start a new client session to load them.
 
-**Experimental Adaptive (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** These clients offer an Easy worker and use the client named in `litespec-shared/adaptive-active.md` to invoke it. Classic removes the worker and marker. Enter selects `flash` in Gemini CLI, `composer-2.5[]` in Cursor and `anthropic/claude-haiku-4-5` in OpenCode with an Anthropic provider available. Enter uses the client model in GitHub Copilot and Qwen Code. In Cursor, OpenCode and Gemini CLI, enter `inherit` to use the session model. Copilot uses display names in VS Code and model IDs in Copilot CLI. Model availability and delegation depend on the client.
+**Experimental Adaptive (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** These clients offer a single executor (`litespec-executor`) for Easy and Medium steps and use the client named in `litespec-shared/adaptive-active.md` to invoke it. Classic removes the worker and marker. Enter selects `flash` in Gemini CLI, `composer-2.5[]` in Cursor and `anthropic/claude-haiku-4-5` in OpenCode with an Anthropic provider available. Enter uses the client model in GitHub Copilot and Qwen Code. In Cursor, OpenCode and Gemini CLI, enter `inherit` to use the session model. Copilot uses display names in VS Code and model IDs in Copilot CLI. Model availability and delegation depend on the client.
 
-Explore records contracts, patterns and acceptance examples. Propose groups code, tests and documentation by delivered outcome. In Adaptive it assigns residual difficulty, ownership and focused review where needed. Direct Apply fills missing phases and dispatches one eligible step at a time. Standalone Verify checks scope, current evidence and risk boundaries.
+Explore records contracts, patterns and acceptance examples. Propose groups code, tests and documentation by delivered outcome. In Adaptive each step records one level, e.g. `Execution: medium`, with focused review where needed. Extract separately testable work and link its dependents. After a Hard decision, rate the remaining implementation again. Direct Apply fills missing phases and dispatches one eligible step at a time. Standalone Verify checks scope, current evidence and risk boundaries.
 
 To compare modes, start at the same revision with the same requirements, checks and role settings. Measure from Explore through final acceptance. Compare parent quota per accepted change, elapsed time, corrections and regressions. Each Adaptive step records `Executed:` (executor, principal or executor-then-principal) and its correction count. Record per-model usage as unknown when the client does not expose it.
 
@@ -160,15 +160,15 @@ During installation, Enter accepts the model shown next to each profile.
 
 | Mode and profile | Codex | Claude Code |
 |---|---|---|
-| Adaptive · Very Easy (`very-easy`) | `gpt-6-luna` | `haiku` |
-| Adaptive · Easy (`easy`) | `gpt-6.2-sol` | `sonnet` |
+| Adaptive · Easy (`easy`) | `gpt-6-luna` | `haiku` |
+| Adaptive · Medium (`medium`) | `gpt-6.2-sol` | `sonnet` |
 | Auto model · Indexing (`search`) | `gpt-6-luna` | `haiku` |
 | Auto model · Bounded analysis (`plan`) | `gpt-6.2-sol` | `sonnet` |
 | Auto model · Complex research (`research`) | `gpt-6.2-astra` | `opus` |
 
-For the parent session, the installer suggests Sol or Sonnet for Medium steps and Astra or Opus for Hard steps and final drafting. Select the parent model in the client. Each profile defaults to `medium` effort. Enter another supported level such as `high`, or use `inherit` in either field to let the client choose the model or effort. Claude Code model alias versions depend on the provider.
+For the parent session, the installer suggests Astra or Opus, since the parent explores, drafts the specs, handles Hard steps and verifies the workers. Select the parent model in the client. Each profile defaults to `medium` effort. Enter another supported level such as `high`, or use `inherit` in either field to let the client choose the model or effort. Claude Code model alias versions depend on the provider.
 
-Edit each role profile in `.codex/agents/` or `.claude/agents/`. Set `model` and a compatible `model_reasoning_effort` (Codex) or `effort` (Claude). Omitted fields use client defaults. Claude also accepts `model: inherit`. To disable Adaptive manually in Codex or Claude Code, delete the `litespec-easy` and `litespec-very-easy` profiles. Rerunning the installer regenerates these profiles and replaces manual edits.
+Edit each role profile in `.codex/agents/` or `.claude/agents/`. Set `model` and a compatible `model_reasoning_effort` (Codex) or `effort` (Claude). Omitted fields use client defaults. Claude also accepts `model: inherit`. To disable Adaptive manually in Codex or Claude Code, delete the `litespec-easy` and `litespec-medium` profiles. Reinstalling removes the retired `litespec-very-easy` profile, the single worker's old `litespec-easy` name and `easy-worker.md`. Rerunning the installer regenerates these profiles and replaces manual edits.
 
 To switch modes, rerun the installer for the same client. To disable roles manually, delete the installed `litespec-shared/delegation-active.md` marker and the profiles it lists. Then open a new session.
 

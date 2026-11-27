@@ -149,9 +149,7 @@ Ambas opciones pueden combinarse. Delegación se aplica cuando el principal ejec
 
 Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Adaptive pregunta por el modelo del ejecutor y, cuando corresponde, el esfuerzo. Abre una sesión nueva para cargarlos.
 
-**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Antigravity, Qwen Code).** Estos clientes ofrecen un único ejecutor (`litespec-executor`) para los pasos fáciles y medios, y el marcador `litespec-shared/adaptive-active.md` indica qué cliente lo invoca. Clásico elimina el ejecutor y el marcador. Enter elige `gemini-4-hydrogen` en Gemini CLI, `composer-2.5[]` en Cursor y `anthropic/claude-haiku-4-5` en OpenCode con un proveedor Anthropic disponible. En GitHub Copilot y Qwen Code, Enter usa el modelo del cliente. En Cursor, OpenCode y Gemini CLI, escribe `inherit` para usar el modelo de la sesión. Copilot usa el nombre visible en VS Code y el identificador en Copilot CLI. La disponibilidad de modelos y la delegación dependen del cliente.
-
-Antigravity comparte `.agents/skills/` con Codex y Zed. Adaptive instala el ejecutor en `.agents/agents/litespec-executor.md`. Enter elige la categoría rápida `flash`. Para usar Hydrogen explícitamente, seleccionalo en la sesión y elegí `inherit` para el ejecutor. También se admite `pro`. [Google Antigravity](https://antigravity.google/docs/subagents?app=cli)
+Consulta los valores predeterminados del instalador y las opciones de modelo para los ejecutores Adaptive. [Reconfigurar perfiles](#reconfigurar-perfiles)
 
 Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive cada paso indica un nivel, por ejemplo `Execution: medium`, y una revisión focalizada si corresponde. Separa los resultados comprobables y enlaza los pasos que dependen de ellos. Una vez resuelta una decisión difícil, vuelve a clasificar la implementación pendiente. Apply completa las fases pendientes si se invoca directamente y despacha un paso delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
 
@@ -161,16 +159,32 @@ Para comparar los modos, parte de la misma revisión con los mismos requisitos, 
 
 ### Reconfigurar perfiles
 
-En la instalación, Enter acepta el modelo que aparece junto a cada perfil.
+En la instalación, Enter acepta el valor que muestra la pregunta del modelo. LiteSpec escribe el perfil local. El cliente determina qué modelos están disponibles para tu sesión y tu cuenta.
+
+#### Codex y Claude Code
 
 | Modo y perfil | Codex | Claude Code |
 |---|---|---|
 | Adaptive · Fácil (`easy`) | `gpt-6-luna` | `haiku` |
 | Adaptive · Medio (`medium`) | `gpt-6.2-sol` | `sonnet` |
 
-Para la sesión principal, el instalador sugiere Astra u Opus, porque el principal explora, redacta las specs, resuelve los pasos difíciles y verifica a los ejecutores. Elige el modelo principal en el cliente. Cada perfil tiene esfuerzo predeterminado `medium`. Puedes escribir otro nivel compatible, como `high`, o `inherit` en cualquiera de los dos campos para que el cliente resuelva el modelo o el esfuerzo. Las versiones detrás de los alias de Claude Code dependen del proveedor.
+El instalador sugiere `gpt-6.2-astra` para la sesión principal de Codex y `opus` para la de Claude Code. Elige ese modelo en el cliente. Pulsar Enter en la pregunta de esfuerzo del ejecutor guarda `medium`. Puedes elegir otro nivel compatible con el modelo o escribir `inherit` para omitir el campo de esfuerzo. En la pregunta del modelo, `inherit` omite el campo en Codex y escribe `model: 'inherit'` en Claude Code. Claude Code resuelve los alias `haiku`, `sonnet` y `opus` según tu configuración. [Catálogo de modelos de OpenAI](https://developers.openai.com/api/docs/models) · [Subagentes de Claude Code](https://code.claude.com/docs/en/sub-agents)
 
 Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. Para desactivar Adaptive manualmente en Codex o Claude Code, borra los perfiles `litespec-easy` y `litespec-medium`. Al reinstalar se eliminan el perfil retirado `litespec-very-easy`, el nombre anterior `litespec-easy` del ejecutor único y `easy-worker.md`. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
+
+#### Ejecutor compartido para pasos fáciles y medios
+
+Gemini CLI, Google Antigravity y GitHub Copilot usan un solo perfil llamado `litespec-executor` en Adaptive experimental. El marcador `litespec-shared/adaptive-active.md` identifica al cliente que lo invoca. Al pasar a Clásico se eliminan el ejecutor y el marcador.
+
+| Cliente | Valor predeterminado al pulsar Enter | Selección del modelo |
+|---|---|---|
+| Gemini CLI | Escribe `gemini-4-hydrogen` | Si tu sesión de Gemini CLI no tiene acceso a Hydrogen, escribe `inherit` para usar el modelo de la sesión o elige el identificador de un modelo disponible. El perfil está en `.gemini/agents/litespec-executor.md`. |
+| Google Antigravity (App / CLI) | `flash` | Elige `flash`, `pro` o `inherit`. Para usar Hydrogen explícitamente, selecciónalo en la sesión y elige `inherit` para el ejecutor. El perfil está en `.agents/agents/litespec-executor.md`. |
+| GitHub Copilot | Omite `model` | Para elegir un modelo en VS Code, usa el valor que sugiere el autocompletado de `model` para el entorno de ejecución activo. En Copilot CLI, usa el identificador del modelo. El perfil está en `.github/agents/litespec-executor.agent.md`. |
+
+[Subagentes de Gemini CLI](https://geminicli.com/docs/core/subagents/) · [Subagentes de Google Antigravity](https://antigravity.google/docs/subagents?app=cli) · [Preferencias de modelo en VS Code](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference#_model-preferences) · [Agentes personalizados en Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli)
+
+#### Delegación
 
 Al habilitar Delegación se instala `litespec-shared/delegation.md` y se conserva su enlace directo en Explore, Propose y Modify. Al deshabilitarla, el instalador quita el archivo y el enlace de las skills instaladas. En una carpeta compartida el instalador pregunta una sola vez, indica a qué clientes se aplica la elección, y reinstalar solo Zed la conserva. La actualización conserva como opción inicial el estado del antiguo AutoMode y retira su marcador. Al reinstalar Codex o Claude Code se eliminan los perfiles `litespec-search`, `litespec-plan` y `litespec-research` del cliente seleccionado; reinstalar solo Antigravity o Zed deja los de Codex, que nada usa y puedes borrar. El instalador quita el enlace solo si coincide con el texto incluido, así que una línea del enlace editada a mano en una skill instalada puede quedar tras desactivar Delegación. Abre una sesión nueva para aplicar la elección.
 

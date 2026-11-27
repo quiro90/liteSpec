@@ -8,8 +8,6 @@ Parent sessions: if the project directory `.litespec/serial/` exists, acquire th
 
 Adaptive execution is active only in Codex with project `.codex/agents/litespec-medium.toml`, or Claude Code with `.claude/agents/litespec-medium.md`. In other clients it is active only if sibling `adaptive-active.md` exists, names the current client and its native worker file exists; then read it. Otherwise ignore Adaptive rules.
 
-If sibling `delegation-active.md` exists, read it; load [delegation rules](delegation.md) only if its adapter matches the current client (Codex or Claude Code). Unknown or different client: normal workflow; never infer the client from shared paths.
-
 - **Language:** use the user's language for communication and new specs; preserve existing document languages, paths, skill names, states, and policy tags.
 - **Record:** keep each change's spec.md, steps, and notes in `.litespec/specs/<spec-name>/` relative to the project root. Create directories as needed without collisions. Preserve enough context to resume without conversation history.
 - **Agreement:** record the explicit request/answers and agreed scope in spec.md. Clear requests settle Explore; ask only unresolved material questions. Suggestions and source edits are not agreements. Record implementation and archive authorizations separately with their scopes; scope confirmation and ready status authorize neither. Reuse valid agreements; never invent them.

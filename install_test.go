@@ -55,7 +55,7 @@ func saveProject(t *testing.T, project, name, content string) {
 
 func TestInstallsEmbeddedSkillsForAllAgents(t *testing.T) {
 	destinations := []string{
-		".agents", ".claude", ".github", ".cursor", ".opencode", ".qoder", ".gemini",
+		".agents", ".claude", ".github", ".cursor", ".opencode", ".qoder", ".gemini", ".agents",
 		".qwen", ".cline", ".devin", ".ade", ".agents", ".minimax",
 	}
 	for index, destination := range destinations {
@@ -63,10 +63,8 @@ func TestInstallsEmbeddedSkillsForAllAgents(t *testing.T) {
 			project := t.TempDir()
 			input := fmt.Sprintf("%d\n", index+1)
 			switch index + 1 {
-			case 1, 2:
+			case 1, 2, 3, 4, 5, 7, 8, 9:
 				input += "\n\n"
-			case 3, 4, 5, 7, 8:
-				input += "\n"
 			}
 			saveProject(t, project, ".litespec/docs/notes.md", "project notes")
 			saveProject(t, project, destination+"/skills/litespec-explore/extra.md", "personal notes")
@@ -82,18 +80,23 @@ func TestInstallsEmbeddedSkillsForAllAgents(t *testing.T) {
 				if err != nil || entry.IsDir() {
 					return err
 				}
+				if name == sourceTree+"/"+delegationRule {
+					expectMissing(t, project, destination+"/skills/"+delegationRule)
+					return nil
+				}
 				expected, err := packageFiles.ReadFile(name)
 				if err != nil {
 					return err
 				}
 				actual := readProject(t, project, destination+"/skills/"+strings.TrimPrefix(name, sourceTree+"/"))
-				if actual != string(expected) {
+				want := strings.ReplaceAll(string(expected), delegationInstruction+"\n", "")
+				if actual != want || strings.Contains(actual, "../litespec-shared/delegation.md") {
 					t.Errorf("installed file differs from embedded file: %s", name)
 				}
 				count++
 				return nil
 			})
-			if err != nil || count < 17 {
+			if err != nil || count < 16 {
 				t.Fatalf("expected all packaged files, got %d: %v", count, err)
 			}
 			if readProject(t, project, ".litespec/docs/notes.md") != "project notes" ||
@@ -150,7 +153,7 @@ func TestNumberedEnglishInstaller(t *testing.T) {
 		t.Fatalf("%v\n%s", err, output.String())
 	}
 	for _, message := range []string{"First installation in this project.", "Classic / Experimental Adaptive",
-		"Step execution", "Experimental Adaptive · Delegate Easy and Medium steps", "Internal skill delegation",
+		"Step execution", "Experimental Adaptive · Delegate Easy and Medium steps", "Allow subagent lookups",
 		"Medium: defined logic with a check.", "Workers · Easy gpt-6-luna / Medium gpt-6.2-sol", "Suggested parent · Hard gpt-6.2-astra",
 		"Easy · Execution - model [Enter = gpt-6-luna]", "Medium · Execution - model [Enter = gpt-6.2-sol]",
 		"Medium · Execution - optional effort [Enter = medium]",
@@ -254,7 +257,7 @@ func TestInstallsMultipleAgentsWithOneGitignorePrompt(t *testing.T) {
 	project := t.TempDir()
 	saveProject(t, project, ".gitignore", "# existing rule\n")
 	saveProject(t, project, ".cursor/skills/litespec-explore/SKILL.md", "previous install")
-	output := invoke(t, project, "", "12, 1, 2, 12\n1\n1\n2\n1\n\n\n\n\ns\n")
+	output := invoke(t, project, "", "13, 1, 2, 13\n1\n1\n2\n1\n\n\n\n\ns\n")
 	ignorePrompt := "¿Qué excluir en .gitignore?"
 	for _, message := range []string{"Agente: Codex | Modo: Clásico", "Agente: Claude Code | Modo: Adaptive experimental", "Agente: Zed | Modo: Clásico"} {
 		summary := strings.Index(output, message)
@@ -278,18 +281,12 @@ func TestInstallsMultipleAgentsWithOneGitignorePrompt(t *testing.T) {
 
 func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 	project := t.TempDir()
-	output := invoke(t, project, "", "1,2\n"+strings.Repeat("2\n2\n"+strings.Repeat("\n", 10), 2))
+	output := invoke(t, project, "", "1,2\n"+strings.Repeat("2\n2\n"+strings.Repeat("\n", 4), 2))
 	for _, profile := range []struct {
 		file, model, effort string
 	}{
-		{".codex/agents/litespec-search.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
-		{".codex/agents/litespec-plan.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
-		{".codex/agents/litespec-research.toml", `model = "gpt-6.2-astra"`, `model_reasoning_effort = "medium"`},
 		{".codex/agents/litespec-easy.toml", `model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
 		{".codex/agents/litespec-medium.toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "medium"`},
-		{".claude/agents/litespec-search.md", "model: 'haiku'", "effort: medium"},
-		{".claude/agents/litespec-plan.md", "model: 'sonnet'", "effort: medium"},
-		{".claude/agents/litespec-research.md", "model: 'opus'", "effort: medium"},
 		{".claude/agents/litespec-easy.md", "model: 'haiku'", "effort: medium"},
 		{".claude/agents/litespec-medium.md", "model: 'sonnet'", "effort: medium"},
 	} {
@@ -299,10 +296,7 @@ func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 		}
 	}
 	for _, message := range []string{
-		"Auto model es para cuando el agente principal genera las specs.",
-		"Indexación - modelo [Enter = gpt-6-luna]",
-		"Indexación - esfuerzo opcional [Enter = medium]",
-		"Investigación compleja - modelo [Enter = opus]",
+		"Permitir búsquedas con subagentes",
 		"Ejecutores · Fácil haiku / Medio sonnet", "Principal sugerido · Difícil opus",
 	} {
 		if !strings.Contains(output, message) {
@@ -322,65 +316,34 @@ func TestNativeProfileDefaultsAndOverrides(t *testing.T) {
 	}
 }
 
-func TestNativeProfilesAndReconfiguration(t *testing.T) {
-	for _, test := range []struct {
-		choice, destination, profileDir, extension, model, effort string
-	}{
-		{"1", ".agents/skills", ".codex/agents", ".toml", `model = "gpt-6.2-sol"`, `model_reasoning_effort = "high"`},
-		{"2", ".claude/skills", ".claude/agents", ".md", "model: 'sonnet'", "effort: high"},
+func TestMigrateDelegation(t *testing.T) {
+	for _, tc := range []struct{ choice, skills, agents, ext string }{
+		{"1", ".agents/skills", ".codex/agents", ".toml"}, {"2", ".claude/skills", ".claude/agents", ".md"},
 	} {
-		t.Run(test.profileDir, func(t *testing.T) {
+		for _, active := range []bool{false, true} {
 			project := t.TempDir()
-			marker := test.destination + "/litespec-shared/delegation-active.md"
-			medium := test.profileDir + "/litespec-medium" + test.extension
-			easy := test.profileDir + "/litespec-easy" + test.extension
-			search := test.profileDir + "/litespec-search" + test.extension
-			plan := test.profileDir + "/litespec-plan" + test.extension
-			research := test.profileDir + "/litespec-research" + test.extension
-			extra := test.profileDir + "/unrelated.md"
-			saveProject(t, project, extra, "other profile")
-			output := invoke(t, project, "", test.choice+"\n2\n2\nsearch-model\nlow\nplan-model\n\nresearch-model\n\n\n\n\nhigh\n")
-			if !strings.Contains(output, "creados=6; reemplazados=0; eliminados=0") ||
-				!strings.Contains(output, "Clásico / Adaptive experimental") ||
-				!strings.Contains(output, "Adaptive experimental · Delegar pasos fáciles y medios") ||
-				!strings.Contains(readProject(t, project, search), "search-model") ||
-				!strings.Contains(readProject(t, project, plan), "plan-model") ||
-				!strings.Contains(readProject(t, project, research), "research-model") {
-				t.Fatal(output)
+			rule := tc.skills + "/" + delegationRule
+			marker := tc.skills + "/" + legacyDelegationMarker
+			saveProject(t, project, rule, "# Native delegation\n")
+			if active {
+				saveProject(t, project, marker, "old marker")
 			}
-			worker := readProject(t, project, medium)
-			if !strings.Contains(worker, test.model) || !strings.Contains(worker, test.effort) {
-				t.Fatal(worker)
+			for _, role := range []string{"search", "plan", "research"} {
+				saveProject(t, project, tc.agents+"/litespec-"+role+tc.ext, "old profile")
 			}
-			previousMarker := readProject(t, project, marker)
-			if !strings.Contains(previousMarker, "litespec-research") {
-				t.Fatal(previousMarker)
+			invoke(t, project, "", tc.choice+"\n1\n\n")
+			expectMissing(t, project, marker)
+			for _, role := range []string{"search", "plan", "research"} {
+				expectMissing(t, project, tc.agents+"/litespec-"+role+tc.ext)
 			}
-			if test.choice == "1" {
-				invoke(t, project, "", "12\n")
-				if readProject(t, project, marker) != previousMarker || readProject(t, project, medium) != worker {
-					t.Fatal("Zed changed Codex configuration")
+			if active {
+				if !strings.Contains(readProject(t, project, rule), "read-only lookup") {
+					t.Fatal("missing lookup rule")
 				}
+				invoke(t, project, "", tc.choice+"\n1\n1\n")
 			}
-			saveProject(t, project, search, "old profile")
-			output = invoke(t, project, "", test.choice+"\n1\n\nnew-model\n"+strings.Repeat("\n", 5))
-			if !strings.Contains(output, "creados=0; reemplazados=4; eliminados=2") ||
-				!strings.Contains(readProject(t, project, search), "new-model") {
-				t.Fatal(output)
-			}
-			expectMissing(t, project, medium)
-			expectMissing(t, project, easy)
-			output = invoke(t, project, "", test.choice+"\n1\n1\n")
-			if !strings.Contains(output, "creados=0; reemplazados=0; eliminados=4") {
-				t.Fatal(output)
-			}
-			for _, name := range []string{marker, search, plan, research} {
-				expectMissing(t, project, name)
-			}
-			if readProject(t, project, extra) != "other profile" {
-				t.Fatal("unrelated profile was changed")
-			}
-		})
+			expectMissing(t, project, rule)
+		}
 	}
 }
 
@@ -391,14 +354,16 @@ func TestExperimentalProfiles(t *testing.T) {
 		{"3", "GitHub Copilot", ".github", "litespec-executor.agent.md", "Claude Sonnet 4.5 (copilot)", "name: litespec-executor", ""},
 		{"4", "Cursor", ".cursor", "litespec-executor.md", "sonnet[thinking=on,effort=medium]", "name: litespec-executor", "composer-2.5[]"},
 		{"5", "OpenCode", ".opencode", "litespec-executor.md", "provider/model#variant", "mode: subagent", "anthropic/claude-haiku-4-5"},
-		{"7", "Gemini CLI", ".gemini", "litespec-executor.md", "gemini-model", "kind: local", "flash"},
-		{"8", "Qwen Code", ".qwen", "litespec-executor.md", "provider/model", "name: litespec-executor", ""},
+		{"7", "Gemini CLI", ".gemini", "litespec-executor.md", "gemini-model", "kind: local", "gemini-4-hydrogen"},
+		{"8", "Antigravity", ".agents", "litespec-executor.md", "inherit", "mainAgent: false", "flash"},
+		{"9", "Qwen Code", ".qwen", "litespec-executor.md", "provider/model", "name: litespec-executor", ""},
 	} {
 		t.Run(test.client, func(t *testing.T) {
 			project := t.TempDir()
 			worker := test.prefix + "/agents/" + test.worker
 			marker := test.prefix + "/skills/litespec-shared/adaptive-active.md"
-			invoke(t, project, "", test.choice+"\n2\n"+test.model+"\n")
+			invoke(t, project, "", test.choice+"\n2\n2\n"+test.model+"\n")
+			readProject(t, project, test.prefix+"/skills/"+delegationRule)
 			profile := readProject(t, project, worker)
 			if !strings.Contains(profile, "model: '"+test.model+"'") || !strings.Contains(profile, test.extra) ||
 				(test.client == "OpenCode" && strings.Contains(profile, "name:")) {
@@ -408,7 +373,7 @@ func TestExperimentalProfiles(t *testing.T) {
 			if !strings.Contains(active, "Client: "+test.client+".") || !strings.Contains(active, worker) {
 				t.Fatal(active)
 			}
-			output := invoke(t, project, "", test.choice+"\n2\n\n")
+			output := invoke(t, project, "", test.choice+"\n2\n\n\n")
 			profile = readProject(t, project, worker)
 			if !strings.Contains(output, "Fácil y medio - modelo compartido") {
 				t.Fatal(output)
@@ -421,15 +386,95 @@ func TestExperimentalProfiles(t *testing.T) {
 				t.Fatalf("empty model should use the client default:\n%s\n%s", output, profile)
 			}
 			if test.client == "OpenCode" {
-				invoke(t, project, "", test.choice+"\n2\ninherit\n")
+				invoke(t, project, "", test.choice+"\n2\n\ninherit\n")
 				if strings.Contains(readProject(t, project, worker), "model:") {
 					t.Fatal("OpenCode inherits the session model when the field is omitted")
 				}
 			}
-			invoke(t, project, "", test.choice+"\n1\n")
+			invoke(t, project, "", test.choice+"\n1\n1\n")
 			expectMissing(t, project, worker)
 			expectMissing(t, project, marker)
 		})
+	}
+}
+
+func TestAntigravitySharesSkillsWithCodex(t *testing.T) {
+	project := t.TempDir()
+	checkLinks := func(enabled bool) {
+		t.Helper()
+		for _, phase := range []string{"explore", "propose", "modify"} {
+			skill := readProject(t, project, ".agents/skills/litespec-"+phase+"/SKILL.md")
+			if strings.Contains(skill, delegationInstruction) != enabled {
+				t.Fatalf("%s delegation link: expected enabled=%t", phase, enabled)
+			}
+		}
+	}
+	invoke(t, project, "", "1,8\n2\n2\n"+strings.Repeat("\n", 4)+"2\n\n")
+	readProject(t, project, ".agents/skills/"+delegationRule)
+	invoke(t, project, "", "13\n")
+	checkLinks(true)
+	readProject(t, project, ".agents/skills/"+delegationRule)
+	codex := ".codex/agents/litespec-medium.toml"
+	marker := ".agents/skills/litespec-shared/adaptive-active.md"
+	readProject(t, project, codex)
+	invoke(t, project, "", "1\n1\n1\n")
+	checkLinks(false)
+	expectMissing(t, project, ".agents/skills/"+delegationRule)
+	readProject(t, project, marker)
+	readProject(t, project, ".agents/agents/litespec-executor.md")
+	invoke(t, project, "", "1\n2\n1\n"+strings.Repeat("\n", 4))
+	invoke(t, project, "", "8\n1\n\n")
+	readProject(t, project, codex)
+	expectMissing(t, project, marker)
+	invoke(t, project, "", "8\n1\n2\n")
+	checkLinks(true)
+	readProject(t, project, ".agents/skills/"+delegationRule)
+}
+
+// The installer removes this exact line to disable Delegation; a reworded link would dangle.
+func TestDelegationLinkMatchesInstaller(t *testing.T) {
+	linked := []string{"litespec-explore", "litespec-propose", "litespec-modify"}
+	err := fs.WalkDir(packageFiles, sourceTree, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.Name() != "SKILL.md" {
+			return err
+		}
+		data, err := packageFiles.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		skill := filepath.Base(filepath.Dir(name))
+		want := 0
+		if slices.Contains(linked, skill) {
+			want = 1
+		}
+		if got := len(delegationLine.FindAll(data, -1)); got != want {
+			t.Errorf("%s: expected %d removable delegation lines, found %d", skill, want, got)
+		}
+		if stripped := delegationLine.ReplaceAll(data, nil); strings.Contains(string(stripped), "delegation.md") {
+			t.Errorf("%s: a delegation.md link would remain after disabling Delegation", skill)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSharedDelegationNotice(t *testing.T) {
+	output := invoke(t, t.TempDir(), "", "1,8\n1\n2\n1\n")
+	for _, message := range []string{
+		"Codex, Antigravity y Zed comparten .agents/skills/: esta elección aplica a todos.",
+		"Antigravity, también seleccionado, usará la misma elección.",
+	} {
+		if !strings.Contains(output, message) {
+			t.Errorf("missing %q:\n%s", message, output)
+		}
+	}
+	if strings.Count(output, "Permitir búsquedas con subagentes") != 1 {
+		t.Fatalf("expected a single Delegation prompt for the shared folder:\n%s", output)
+	}
+	if strings.Contains(invoke(t, t.TempDir(), "", "2\n1\n1\n"), "comparten") {
+		t.Fatal("Claude Code does not share its skills folder")
 	}
 }
 
@@ -446,7 +491,7 @@ func TestReinstallRemovesRetiredFiles(t *testing.T) {
 	}
 	saveProject(t, project, ".claude/agents/unrelated.md", "other profile")
 	invoke(t, project, "", "2\n2\n1\n"+strings.Repeat("\n", 4))
-	invoke(t, project, "", "4\n2\n\n")
+	invoke(t, project, "", "4\n2\n1\n\n")
 	for _, name := range retired {
 		expectMissing(t, project, name)
 	}
@@ -463,10 +508,10 @@ func TestPreflightPreservesExistingFiles(t *testing.T) {
 	for _, test := range []struct {
 		name, input, conflict string
 	}{
-		{"invalid agent", "14\n", ""},
-		{"invalid multi-agent selection", "1,14\n", ""},
+		{"invalid agent", "15\n", ""},
+		{"invalid multi-agent selection", "1,15\n", ""},
 		{"invalid mode", "1\n3\n", ""},
-		{"invalid model", "5\n2\nbad model\n", ""},
+		{"invalid model", "5\n2\n1\nbad model\n", ""},
 		{"invalid effort", "2\n2\n1\nsonnet\nultra\n", ""},
 		{"cancelled", "1\n2\n1\n", ""},
 		{"profile conflict", "1\n1\n1\n", ".codex/agents/litespec-plan.toml/keep"},

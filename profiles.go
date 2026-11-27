@@ -42,7 +42,8 @@ var agents = []agent{
 	{name: "Cursor", skills: ".cursor/skills", profiles: ".cursor/agents", invocation: "through native subagent delegation", workerModel: "composer-2.5[]"},
 	{name: "OpenCode", skills: ".opencode/skills", profiles: ".opencode/agents", invocation: "through native subagent delegation", modelField: "mode: subagent\n", workerModel: "anthropic/claude-haiku-4-5"},
 	{name: "Qoder CLI", skills: ".qoder/skills"},
-	{name: "Gemini CLI", skills: ".gemini/skills", profiles: ".gemini/agents", invocation: "through its native subagent tool", modelField: "kind: local\n", workerModel: "flash"},
+	{name: "Gemini CLI", skills: ".gemini/skills", profiles: ".gemini/agents", invocation: "through its native subagent tool", modelField: "kind: local\n", workerModel: "gemini-4-hydrogen"},
+	{name: "Antigravity", skills: ".agents/skills", profiles: ".agents/agents", invocation: "with invoke_subagent", modelField: "mainAgent: false\nsubagent: true\n", workerModel: "flash"},
 	{name: "Qwen Code", skills: ".qwen/skills", profiles: ".qwen/agents", invocation: "through native subagent delegation"},
 	{name: "Cline", skills: ".cline/skills"},
 	{name: "Devin Local", skills: ".devin/skills"},
@@ -54,6 +55,7 @@ var agents = []agent{
 var modelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$`)
 var claudeModelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/@-]*(\[1m\])?$`)
 var experimentalModelIDs = map[string]*regexp.Regexp{
+	"Antigravity":    regexp.MustCompile(`^(flash|pro|inherit)$`),
 	"GitHub Copilot": regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 ._:/()-]*$`),
 	"Cursor":         regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(\[([a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+(,[a-zA-Z0-9_-]+=[a-zA-Z0-9._-]+)*)?\])?$`),
 	"OpenCode":       regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]*(#[a-zA-Z0-9][a-zA-Z0-9._-]*)?$`),
@@ -63,9 +65,6 @@ var roleDescriptions = map[string]string{
 	"easy":     "Execute only the Easy step explicitly assigned by the LiteSpec parent.",
 	"medium":   "Execute only the Medium step explicitly assigned by the LiteSpec parent.",
 	"executor": "Execute only the Easy or Medium step explicitly assigned by the LiteSpec parent.",
-	"search":   "Index relevant files and locate references with paths and lines; do not edit or decide scope.",
-	"plan":     "Analyze available evidence and return a bounded proposal; do not edit or implement.",
-	"research": "Investigate a complex technical question and return evidence, tradeoffs and uncertainties; do not edit or implement.",
 }
 
 type fileChange struct {
@@ -78,7 +77,7 @@ func writeChange(name, content string) fileChange {
 	return fileChange{name: name, content: []byte(content)}
 }
 
-func (a agent) configure(root *os.Root, menu terminal) (string, []fileChange, error) {
+func (a agent) configure(root *os.Root, menu terminal, delegation map[string]bool, selected []agent) (string, []fileChange, error) {
 	classic := menu.text("Clásico", "Classic")
 	if a.profiles == "" {
 		return classic, nil, nil
@@ -108,40 +107,127 @@ func (a agent) configure(root *os.Root, menu terminal) (string, []fileChange, er
 	if !adaptive {
 		modeLabel = classic
 	}
-	if a.invocation != "" {
-		changes, err := a.experimentalChanges(menu, adaptive)
-		return modeLabel, changes, err
+	enabled, decided := delegation[a.skills]
+	if !decided {
+		enabled, err = configureDelegation(root, menu, a, selected)
+		if err != nil {
+			return "", nil, err
+		}
+		delegation[a.skills] = enabled
 	}
-
-	marker := path.Join(a.skills, "litespec-shared/delegation-active.md")
-	info, err := checkPath(root, marker, false, false, menu.language)
-	if err != nil {
-		return "", nil, err
+	if enabled {
+		modeLabel += menu.text(" + Delegación", " + Delegation")
 	}
-	defaultRoles := 0
-	if info != nil {
-		defaultRoles = 1
+	var profiles []fileChange
+	if a.native != "" {
+		profiles, err = a.nativeChanges(menu, adaptive)
+	} else {
+		profiles, err = a.experimentalChanges(menu, adaptive)
 	}
-	roleHelp := fmt.Sprintf(menu.text(
-		"Auto model es para cuando el agente principal genera las specs.\nIndexación · %s   Análisis acotado · %s\nInvestigación compleja · %s\nRedacción final · %s sugerido para el principal",
-		"Auto model is for when the parent agent generates the specs.\nIndexing · %s   Bounded analysis · %s\nComplex research · %s\nFinal drafting · %s suggested for the parent",
-	), a.models.light, a.models.standard, a.models.advanced, a.models.advanced)
-	roles, err := menu.choose(menu.text("Delegación interna de las skills", "Internal skill delegation"), roleHelp,
-		fmt.Sprintf("Roles [%d]", defaultRoles+1),
-		[]string{menu.text("Desactivada", "Disabled"), menu.text("Auto model por rol", "Auto model by role")},
-		defaultRoles, menu.text("opción de roles inválida", "invalid role option"))
-	if err != nil {
-		return "", nil, err
-	}
-	autoModel := roles == 1
-	if autoModel {
-		modeLabel += " + Auto model"
-	}
-	changes, err := a.nativeChanges(menu, marker, autoModel, adaptive)
-	return modeLabel, changes, err
+	return modeLabel, profiles, err
 }
 
-func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive bool) ([]fileChange, error) {
+const delegationRule = "litespec-shared/delegation.md"
+const legacyDelegationMarker = "litespec-shared/delegation-active.md"
+
+// installedDelegation reports the setting already present in a skills destination.
+func installedDelegation(root *os.Root, menu terminal, destination string) (bool, error) {
+	old, err := checkPath(root, path.Join(destination, legacyDelegationMarker), false, false, menu.language)
+	if err != nil || old != nil {
+		return old != nil, err
+	}
+	name := path.Join(destination, delegationRule)
+	info, err := checkPath(root, name, false, false, menu.language)
+	if err != nil || info == nil {
+		return false, err
+	}
+	content, err := root.ReadFile(name)
+	if err != nil {
+		return false, err
+	}
+	// Older releases installed this document even with AutoMode disabled.
+	return !strings.HasPrefix(string(content), "# Native delegation"), nil
+}
+
+// supportsDelegation reports whether a client offering Delegation installs into destination.
+func supportsDelegation(destination string) bool {
+	return slices.ContainsFunc(agents, func(a agent) bool { return a.profiles != "" && a.skills == destination })
+}
+
+// delegationDefault keeps the existing setting only where a Delegation client owns the folder.
+func delegationDefault(root *os.Root, menu terminal, destination string) (bool, error) {
+	if !supportsDelegation(destination) {
+		return false, nil
+	}
+	return installedDelegation(root, menu, destination)
+}
+
+func configureDelegation(root *os.Root, menu terminal, current agent, selected []agent) (bool, error) {
+	enabled, err := delegationDefault(root, menu, current.skills)
+	if err != nil {
+		return false, err
+	}
+	def := 0
+	if enabled {
+		def = 1
+	}
+	help := menu.text("Búsquedas de solo lectura en Explore, Propose y Modify. El principal decide el alcance y el diseño.", "Read-only lookups during Explore, Propose and Modify. The parent decides scope and design.")
+	help += sharedDelegationNotice(menu, current, selected)
+	label := menu.text("Delegación", "Delegation")
+	choice, err := menu.choose(label, help, fmt.Sprintf("%s [%d]", label, def+1), []string{
+		menu.text("Desactivada", "Disabled"), menu.text("Permitir búsquedas con subagentes", "Allow subagent lookups"),
+	}, def, menu.text("opción de delegación inválida", "invalid delegation option"))
+	return choice == 1, err
+}
+
+// sharedDelegationNotice names the clients affected by a choice made for a shared skills folder.
+func sharedDelegationNotice(menu terminal, current agent, selected []agent) string {
+	var sharing, alsoSelected []string
+	for _, other := range agents {
+		if other.skills != current.skills {
+			continue
+		}
+		sharing = append(sharing, other.name)
+		if other.name != current.name && slices.ContainsFunc(selected, func(s agent) bool { return s.name == other.name }) {
+			alsoSelected = append(alsoSelected, other.name)
+		}
+	}
+	if len(sharing) < 2 {
+		return ""
+	}
+	notice := fmt.Sprintf(menu.text(
+		"\n%s comparten %s/: esta elección aplica a todos.",
+		"\n%s share %s/: this choice applies to all of them.",
+	), joinNames(menu, sharing), current.skills)
+	if len(alsoSelected) > 0 {
+		notice += fmt.Sprintf(menu.text(
+			"\n%s, también seleccionado, usará la misma elección.",
+			"\n%s, also selected, will use the same choice.",
+		), joinNames(menu, alsoSelected))
+	}
+	return notice
+}
+
+func joinNames(menu terminal, names []string) string {
+	if len(names) < 2 {
+		return strings.Join(names, "")
+	}
+	return strings.Join(names[:len(names)-1], ", ") + menu.text(" y ", " and ") + names[len(names)-1]
+}
+
+// delegationChanges installs or removes the shared rule and retires the AutoMode marker.
+func delegationChanges(destination string, enabled bool) ([]fileChange, error) {
+	rule := fileChange{name: path.Join(destination, delegationRule), remove: !enabled}
+	if enabled {
+		var err error
+		if rule.content, err = packageFiles.ReadFile(path.Join(sourceTree, delegationRule)); err != nil {
+			return nil, err
+		}
+	}
+	return []fileChange{rule, {name: path.Join(destination, legacyDelegationMarker), remove: true}}, nil
+}
+
+func (a agent) nativeChanges(menu terminal, adaptive bool) ([]fileChange, error) {
 	codex := a.native == "codex"
 	extension, modelPattern := "md", claudeModelID
 	allowedEfforts := []string{"low", "medium", "high", "xhigh", "max"}
@@ -152,24 +238,18 @@ func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive b
 	const defaultEffort = "medium"
 	roleModels := [...]struct {
 		role, label, model string
-		enabled            bool
 	}{
-		{"search", menu.text("Indexación", "Indexing"), a.models.light, autoModel},
-		{"plan", menu.text("Análisis acotado", "Bounded analysis"), a.models.standard, autoModel},
-		{"research", menu.text("Investigación compleja", "Complex research"), a.models.advanced, autoModel},
-		{"easy", menu.text("Fácil · Ejecución", "Easy · Execution"), a.models.light, adaptive},
-		{"medium", menu.text("Medio · Ejecución", "Medium · Execution"), a.models.standard, adaptive},
+		{"easy", menu.text("Fácil · Ejecución", "Easy · Execution"), a.models.light},
+		{"medium", menu.text("Medio · Ejecución", "Medium · Execution"), a.models.standard},
 	}
-	changes := make([]fileChange, 0, len(roleModels)+2)
-	// Retired by the Easy/Medium scale; removed on every reinstall.
-	changes = append(changes, fileChange{name: path.Join(a.profiles, "litespec-very-easy."+extension), remove: true})
-	if !autoModel {
-		changes = append(changes, fileChange{name: marker, remove: true})
+	var changes []fileChange
+	for _, retired := range []string{"very-easy", "search", "plan", "research"} {
+		changes = append(changes, fileChange{name: path.Join(a.profiles, "litespec-"+retired+"."+extension), remove: true})
 	}
 	for _, profile := range roleModels {
 		role := profile.role
 		name := path.Join(a.profiles, "litespec-"+role+"."+extension)
-		if !profile.enabled {
+		if !adaptive {
 			changes = append(changes, fileChange{name: name, remove: true})
 			continue
 		}
@@ -200,24 +280,17 @@ func (a agent) nativeChanges(menu terminal, marker string, autoModel, adaptive b
 		}
 		changes = append(changes, writeChange(name, a.nativeProfile(role, model, effort)))
 	}
-	if autoModel {
-		content := fmt.Sprintf("Native delegation active.\nAdapter: %s. Use litespec-search, litespec-plan and litespec-research when useful under delegation.md. Native definitions: %s/litespec-{search,plan,research}.%s. Do not assume the configured model/effort is applied. On failure inform and continue with current agent within authorization.\n", a.native, a.profiles, extension)
-		changes = append(changes, writeChange(marker, content))
-	}
 	return changes, nil
 }
 
-func (a agent) instructions(role string) string {
-	if isExecutor(role) {
-		return fmt.Sprintf("Follow %s/litespec-shared/executor.md for the assigned step. Do not delegate.", a.skills)
-	}
-	return fmt.Sprintf("%s Follow %s/litespec-shared/protocol.md. Do not delegate. Respect parent authorization and existing edits. Parent owns LiteSpec records and Archive. Return evidence, checks, uncertainty and pending work.", roleDescriptions[role], a.skills)
+func (a agent) executorInstructions() string {
+	return fmt.Sprintf("Follow %s/litespec-shared/executor.md for the assigned step. Do not delegate.", a.skills)
 }
 
 func (a agent) nativeProfile(role, model, effort string) string {
 	var profile strings.Builder
 	if a.native == "codex" {
-		fmt.Fprintf(&profile, "name = %q\ndescription = %q\ndeveloper_instructions = %q\n", "litespec-"+role, roleDescriptions[role], a.instructions(role))
+		fmt.Fprintf(&profile, "name = %q\ndescription = %q\ndeveloper_instructions = %q\n", "litespec-"+role, roleDescriptions[role], a.executorInstructions())
 		if model != "" {
 			fmt.Fprintf(&profile, "model = %q\n", model)
 		}
@@ -234,10 +307,7 @@ func (a agent) nativeProfile(role, model, effort string) string {
 	if effort != "" {
 		fmt.Fprintf(&profile, "effort: %s\n", effort)
 	}
-	if !isExecutor(role) {
-		profile.WriteString("tools: Read, Grep, Glob\n")
-	}
-	fmt.Fprintf(&profile, "---\n\n%s\n", a.instructions(role))
+	fmt.Fprintf(&profile, "---\n\n%s\n", a.executorInstructions())
 	return profile.String()
 }
 
@@ -248,10 +318,13 @@ func (a agent) experimentalChanges(menu terminal, adaptive bool) ([]fileChange, 
 	}
 	worker := path.Join(a.profiles, workerFile)
 	// The single worker was named litespec-easy before the Easy/Medium scale.
-	retired := fileChange{name: path.Join(a.profiles, strings.Replace(workerFile, "litespec-executor", "litespec-easy", 1)), remove: true}
+	var changes []fileChange
+	if a.name != "Antigravity" {
+		changes = append(changes, fileChange{name: path.Join(a.profiles, strings.Replace(workerFile, "litespec-executor", "litespec-easy", 1)), remove: true})
+	}
 	marker := path.Join(a.skills, "litespec-shared/adaptive-active.md")
 	if !adaptive {
-		return []fileChange{retired, {name: marker, remove: true}, {name: worker, remove: true}}, nil
+		return append(changes, fileChange{name: marker, remove: true}, fileChange{name: worker, remove: true}), nil
 	}
 
 	if a.name == "GitHub Copilot" {
@@ -259,6 +332,9 @@ func (a agent) experimentalChanges(menu terminal, adaptive bool) ([]fileChange, 
 			"VS Code usa el nombre visible del modelo. Copilot CLI usa su identificador.",
 			"VS Code uses the model's display name. Copilot CLI uses its identifier.",
 		))
+	}
+	if a.name == "Antigravity" {
+		fmt.Fprintln(menu.out, menu.text("Categorías: flash, pro, inherit. Para usar Hydrogen, seleccionalo en la sesión y elegí inherit.", "Tiers: flash, pro, inherit. To use Hydrogen, select it in the session and choose inherit."))
 	}
 	model, err := menu.askModel(menu.text("Fácil y medio - modelo compartido", "Easy and Medium - shared model"), a.workerModel)
 	if err != nil {
@@ -284,11 +360,7 @@ func (a agent) experimentalChanges(menu terminal, adaptive bool) ([]fileChange, 
 	if model != "" {
 		fmt.Fprintf(&profile, "model: '%s'\n", model)
 	}
-	fmt.Fprintf(&profile, "---\n\n%s\n", a.instructions("executor"))
+	fmt.Fprintf(&profile, "---\n\n%s\n", a.executorInstructions())
 	active := fmt.Sprintf("Adaptive active.\nClient: %s. Executor: %s. Only %s uses this marker; any other client ignores it and the Adaptive rules. Invoke the litespec-executor subagent %s for easy and medium steps. Do not assume the requested model is applied; if the worker is unavailable, follow adaptive-apply.md.\n", a.name, worker, a.name, a.invocation)
-	return []fileChange{retired, writeChange(worker, profile.String()), writeChange(marker, active)}, nil
-}
-
-func isExecutor(role string) bool {
-	return role == "easy" || role == "medium" || role == "executor"
+	return append(changes, writeChange(worker, profile.String()), writeChange(marker, active)), nil
 }

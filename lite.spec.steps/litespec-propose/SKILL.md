@@ -4,6 +4,7 @@ description: Turn confirmed LiteSpec exploration into a minimal index and execut
 ---
 
 Read the [shared rules](../litespec-shared/protocol.md) and [specification contract](../litespec-shared/specification.md).
+Read the [delegation rules](../litespec-shared/delegation.md) before gathering evidence.
 
 1. Read spec.md and only relevant findings. Require recorded Explore confirmation; if missing or invalid, complete litespec-explore first.
 2. Build the fewest independently verifiable steps under the specification contract. Carry continuity constraints into affected tasks and acceptance, including authorized removal/migration.

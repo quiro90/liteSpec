@@ -6,7 +6,7 @@ Especificaciones breves y claras para trabajar con agentes de IA consumiendo poc
 
 La documentación generada sigue el mismo objetivo: mínima, organizada por temas y útil para continuar sin reconstruir conversaciones.
 
-> **Experimental.** LiteSpec en su conjunto es experimental: el flujo, Adaptive, la delegación por roles y el instalador pueden cambiar entre versiones y no están validados en todos los clientes. Revisa las specs, los cambios y las comprobaciones que produzca el agente antes de confiar en ellos.
+> **Experimental.** LiteSpec en su conjunto es experimental: el flujo, Adaptive, la delegación y el instalador pueden cambiar entre versiones y no están validados en todos los clientes. Revisa las specs, los cambios y las comprobaciones que produzca el agente antes de confiar en ellos.
 
 ## Compilar y publicar
 
@@ -66,7 +66,7 @@ GitHub Actions ejecuta `go test` y `go vet` en Windows, macOS y Linux. Si pasan 
 
 ## Flujo
 
-El instalador ofrece **Clásico** para todos los agentes y **Adaptive experimental** para Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI y Qwen Code. Adaptive está en una etapa inicial de pruebas en todos los clientes compatibles. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal separa el trabajo comprobable por partes, delega los pasos fáciles y medios y verifica los resultados. [Opciones del instalador](#elección-del-modo-en-el-instalador)
+El instalador ofrece **Clásico** para todos los agentes y **Adaptive experimental** para Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, Gemini CLI, Antigravity y Qwen Code. Adaptive está en una etapa inicial de pruebas en todos los clientes compatibles. En ambos modos cada paso entrega un resultado comprobable. En Adaptive, el principal separa el trabajo comprobable por partes, delega los pasos fáciles y medios y verifica los resultados. [Opciones del instalador](#elección-del-modo-en-el-instalador)
 
 1. **Explore:** inspeccionar lo relevante y confirmar objetivo y alcance.
 2. **Propose:** preparar `spec.md` como índice y pasos con contexto, tareas y comprobaciones. Un cambio pequeño puede usar un solo archivo.
@@ -109,23 +109,24 @@ Antes del menú de agentes, el instalador muestra la versión del ejecutable en 
 
 Puedes instalar LiteSpec para varios agentes en una sola pasada. El instalador pide el modo y la configuración de cada agente que ofrezca esas opciones. La instalación es local al proyecto:
 
-| Agente | Destino | Adaptativo | AutoMode |
+| Agente | Destino | Adaptativo | Delegación |
 |---|---|:---:|:---:|
 | [Codex](https://learn.chatgpt.com/docs/build-skills) | `.agents/skills/` | ✅ exp. | ✅ exp. |
 | [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/` | ✅ exp. | ✅ exp. |
-| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | ✅ exp. | — |
-| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | ✅ exp. | — |
-| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | ✅ exp. | — |
+| [GitHub Copilot](https://code.visualstudio.com/docs/agent-customization/agent-skills) | `.github/skills/` | ✅ exp. | ✅ exp. |
+| [Cursor](https://cursor.com/docs/skills) | `.cursor/skills/` | ✅ exp. | ✅ exp. |
+| [OpenCode](https://opencode.ai/docs/skills/) | `.opencode/skills/` | ✅ exp. | ✅ exp. |
 | [Qoder CLI](https://docs.qoder.com/cli/Skills) | `.qoder/skills/` | — | — |
-| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | ✅ exp. | — |
-| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | ✅ exp. | — |
+| [Gemini CLI](https://geminicli.com/docs/cli/skills/) | `.gemini/skills/` | ✅ exp. | ✅ exp. |
+| [Antigravity (App / CLI)](https://antigravity.google/docs/skills) | `.agents/skills/` | ✅ exp. | ✅ exp. |
+| [Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) | `.qwen/skills/` | ✅ exp. | ✅ exp. |
 | [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/` | — | — |
 | [Devin Local](https://docs.devin.ai/desktop/devin-local/customizations) | `.devin/skills/` | — | — |
 | [ADE](https://github.com/arul28/ADE/blob/main/apps/desktop/src/shared/agentSkillRoots.ts) | `.ade/skills/` | — | — |
 | [Zed Agent](https://zed.dev/docs/ai/skills) | `.agents/skills/` | — | — |
 | MiniMax Code | `.minimax/skills/` | — | — |
 
-Zed Agent requiere un proyecto de confianza y comparte este destino con Codex. Auto model solo se aplica en el cliente indicado por su marcador; Zed mantiene el flujo normal y conserva la configuración de Codex. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
+Codex, Antigravity y Zed comparten `.agents/skills/` y la preferencia de Delegación. Zed requiere un proyecto de confianza. Para agentes externos dentro de Zed, elige su propia opción del instalador. ADE usa aquí skills del proyecto, no su directorio interno resources/agent-skills.
 
 Se copian las seis skills y las reglas compartidas. LICENSE permanece en la raíz del repositorio. Las reglas se cargan por necesidad: `protocol.md` para todas las skills, `specification.md` al definir especificaciones, `revision.md` al ajustar cambios, `verification.md` al comprobar resultados, `documentation.md` al consolidar notas y `closure.md` al archivar. En Adaptive, `adaptive-plan.md` al clasificar pasos, `adaptive-apply.md` al ejecutarlos y `executor.md` para los ejecutores fáciles y medios; `serial.md` solo si existe `.litespec/serial/`. No se lee toda la carpeta por defecto. Al reinstalar se reemplazan solo los archivos enumerados del paquete en las siete carpetas de LiteSpec; se conservan archivos adicionales y otras skills. Los enlaces o conflictos entre archivos y carpetas en el destino detienen la instalación antes del reemplazo.
 
@@ -137,16 +138,20 @@ Abre una nueva sesión del agente y pide: **«Usa litespec-explore para [tu camb
 
 ## Elección del modo en el instalador
 
-En el menú de agentes, Codex y Claude Code ofrecen dos decisiones independientes.
+Los clientes con Delegación en la tabla anterior ofrecen dos opciones independientes. En GitHub Copilot se aplica a VS Code y Copilot CLI.
 
 | Pregunta | Opciones |
 |---|---|
 | Ejecución de pasos | **1 Clásico** (Enter) o **2 Adaptive experimental**. En Adaptive, los pasos `easy` son mecánicos y los `medium` implementan lógica con comportamiento, interfaces y comprobaciones definidos. El principal resuelve los pasos `hard` cuando queda por decidir el comportamiento, una interfaz o la estrategia. |
-| Delegación interna de las skills | **1 Desactivada** o **2 Auto model por rol**. El principal redacta las specs y puede delegar la indexación, el análisis acotado y la investigación compleja a roles de solo lectura. Enter conserva la activación actual. En un proyecto nuevo empieza desactivada. |
+| Delegación | **1 Desactivada** o **2 Permitir búsquedas con subagentes** durante Explore, Propose y Modify. El principal decide el alcance y el diseño. Enter conserva la elección del destino de skills. Por defecto está desactivada. |
 
-Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Modelo y esfuerzo se preguntan en cada ejecución. Abre una sesión nueva para cargarlos.
+Ambas opciones pueden combinarse. Delegación se aplica cuando el principal ejecuta Explore, Propose o Modify; las revisiones que Apply resuelve por su cuenta no la usan, así que invoca `litespec-modify` para una revisión más grande. Adaptive solo decide quién ejecuta los pasos durante Apply.
 
-**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Qwen Code).** Estos clientes ofrecen un único ejecutor (`litespec-executor`) para los pasos fáciles y medios, y el marcador `litespec-shared/adaptive-active.md` indica qué cliente lo invoca. Clásico elimina el ejecutor y el marcador. Enter elige `flash` en Gemini CLI, `composer-2.5[]` en Cursor y `anthropic/claude-haiku-4-5` en OpenCode con un proveedor Anthropic disponible. En GitHub Copilot y Qwen Code, Enter usa el modelo del cliente. En Cursor, OpenCode y Gemini CLI, escribe `inherit` para usar el modelo de la sesión. Copilot usa el nombre visible en VS Code y el identificador en Copilot CLI. La disponibilidad de modelos y la delegación dependen del cliente.
+Qoder CLI, Cline, Devin Local, ADE, Zed y MiniMax Code usan Clásico. Cada ejecución del instalador regenera los archivos de configuración de las opciones elegidas y borra los que dejaron de elegirse; solo toca esos archivos exactos, así que sus ediciones manuales se reemplazan y los demás agentes se conservan. Adaptive pregunta por el modelo del ejecutor y, cuando corresponde, el esfuerzo. Abre una sesión nueva para cargarlos.
+
+**Adaptive experimental (GitHub Copilot, Cursor, OpenCode, Gemini CLI, Antigravity, Qwen Code).** Estos clientes ofrecen un único ejecutor (`litespec-executor`) para los pasos fáciles y medios, y el marcador `litespec-shared/adaptive-active.md` indica qué cliente lo invoca. Clásico elimina el ejecutor y el marcador. Enter elige `gemini-4-hydrogen` en Gemini CLI, `composer-2.5[]` en Cursor y `anthropic/claude-haiku-4-5` en OpenCode con un proveedor Anthropic disponible. En GitHub Copilot y Qwen Code, Enter usa el modelo del cliente. En Cursor, OpenCode y Gemini CLI, escribe `inherit` para usar el modelo de la sesión. Copilot usa el nombre visible en VS Code y el identificador en Copilot CLI. La disponibilidad de modelos y la delegación dependen del cliente.
+
+Antigravity comparte `.agents/skills/` con Codex y Zed. Adaptive instala el ejecutor en `.agents/agents/litespec-executor.md`. Enter elige la categoría rápida `flash`. Para usar Hydrogen explícitamente, seleccionalo en la sesión y elegí `inherit` para el ejecutor. También se admite `pro`. [Google Antigravity](https://antigravity.google/docs/subagents?app=cli)
 
 Explore registra los contratos, patrones y ejemplos de aceptación. Propose agrupa código, pruebas y documentación que entregan el mismo resultado. En Adaptive cada paso indica un nivel, por ejemplo `Execution: medium`, y una revisión focalizada si corresponde. Separa los resultados comprobables y enlaza los pasos que dependen de ellos. Una vez resuelta una decisión difícil, vuelve a clasificar la implementación pendiente. Apply completa las fases pendientes si se invoca directamente y despacha un paso delegable a la vez. Verify comprueba alcance, evidencia vigente y fronteras de riesgo, incluso si se invoca por separado.
 
@@ -162,15 +167,12 @@ En la instalación, Enter acepta el modelo que aparece junto a cada perfil.
 |---|---|---|
 | Adaptive · Fácil (`easy`) | `gpt-6-luna` | `haiku` |
 | Adaptive · Medio (`medium`) | `gpt-6.2-sol` | `sonnet` |
-| Auto model · Indexación (`search`) | `gpt-6-luna` | `haiku` |
-| Auto model · Análisis acotado (`plan`) | `gpt-6.2-sol` | `sonnet` |
-| Auto model · Investigación compleja (`research`) | `gpt-6.2-astra` | `opus` |
 
 Para la sesión principal, el instalador sugiere Astra u Opus, porque el principal explora, redacta las specs, resuelve los pasos difíciles y verifica a los ejecutores. Elige el modelo principal en el cliente. Cada perfil tiene esfuerzo predeterminado `medium`. Puedes escribir otro nivel compatible, como `high`, o `inherit` en cualquiera de los dos campos para que el cliente resuelva el modelo o el esfuerzo. Las versiones detrás de los alias de Claude Code dependen del proveedor.
 
 Edita cada perfil en `.codex/agents/` o `.claude/agents/`. Define `model` y un esfuerzo compatible mediante `model_reasoning_effort` (Codex) o `effort` (Claude). Los campos omitidos usan los valores predeterminados del cliente. Claude también acepta `model: inherit`. Para desactivar Adaptive manualmente en Codex o Claude Code, borra los perfiles `litespec-easy` y `litespec-medium`. Al reinstalar se eliminan el perfil retirado `litespec-very-easy`, el nombre anterior `litespec-easy` del ejecutor único y `easy-worker.md`. Ejecutar de nuevo el instalador regenera estos perfiles y reemplaza las ediciones manuales.
 
-Para cambiar de modo, ejecuta el instalador para el mismo cliente. Para desactivar los roles manualmente, borra el marcador instalado `litespec-shared/delegation-active.md` y los perfiles que enumera. Después abre una sesión nueva.
+Al habilitar Delegación se instala `litespec-shared/delegation.md` y se conserva su enlace directo en Explore, Propose y Modify. Al deshabilitarla, el instalador quita el archivo y el enlace de las skills instaladas. En una carpeta compartida el instalador pregunta una sola vez, indica a qué clientes se aplica la elección, y reinstalar solo Zed la conserva. La actualización conserva como opción inicial el estado del antiguo AutoMode y retira su marcador. Al reinstalar Codex o Claude Code se eliminan los perfiles `litespec-search`, `litespec-plan` y `litespec-research` del cliente seleccionado; reinstalar solo Antigravity o Zed deja los de Codex, que nada usa y puedes borrar. El instalador quita el enlace solo si coincide con el texto incluido, así que una línea del enlace editada a mano en una skill instalada puede quedar tras desactivar Delegación. Abre una sesión nueva para aplicar la elección.
 
 ## Numeración de versiones
 

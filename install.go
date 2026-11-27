@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
@@ -51,27 +52,43 @@ func install(root *os.Root, menu terminal, selected []agent, executable string) 
 	var folders, destinations []string
 	installations := make([]agentInstallation, 0, len(selected))
 	planned := make(map[string]bool)
+	delegation := make(map[string]bool)
 	for _, agent := range selected {
 		if !planned[agent.skills] {
-			changes, skillFolders, err := skillChanges(agent.skills)
-			if err != nil {
-				return err
-			}
 			planned[agent.skills] = true
-			skills = append(skills, changes...)
-			folders = append(folders, skillFolders...)
-			destinations = append(destinations, agent.skills+"/")
+			destinations = append(destinations, agent.skills)
 		}
 		if len(selected) > 1 && agent.profiles != "" {
 			fmt.Fprintln(menu.out)
 			menu.status("◆", "#FA8072", fmt.Sprintf(menu.text("Configurando %s", "Configuring %s"), agent.name))
 		}
-		mode, profiles, err := agent.configure(root, menu)
+		mode, profiles, err := agent.configure(root, menu, delegation, selected)
 		if err != nil {
 			return err
 		}
 		installations = append(installations, agentInstallation{agent, mode, profiles})
 		allProfiles = append(allProfiles, profiles...)
+	}
+
+	// The rule is written with the skills that link to it, once per destination.
+	for _, destination := range destinations {
+		enabled, configured := delegation[destination]
+		if !configured {
+			// A classic-only client keeps the choice of a Delegation client sharing its folder.
+			if enabled, err = delegationDefault(root, menu, destination); err != nil {
+				return err
+			}
+		}
+		rule, err := delegationChanges(destination, enabled)
+		if err != nil {
+			return err
+		}
+		changes, skillFolders, err := skillChanges(destination, enabled)
+		if err != nil {
+			return err
+		}
+		skills = append(append(skills, rule...), changes...)
+		folders = append(folders, skillFolders...)
 	}
 
 	if err := root.Mkdir(installLock, 0o755); err != nil {
@@ -154,7 +171,7 @@ func (installation agentInstallation) applyProfiles(root *os.Root, menu terminal
 	if agent.name == "Zed" {
 		fmt.Fprintln(menu.out, menu.text("Zed usa el flujo normal y conserva la configuración de Codex.", "Zed uses the standard workflow and preserves the Codex configuration."))
 	}
-	if mode != menu.text("Clásico", "Classic") {
+	if strings.HasPrefix(mode, menu.text("Adaptive experimental", "Experimental Adaptive")) {
 		fmt.Fprintf(menu.out, menu.text(
 			"Configuración: %s. Confirmá en el cliente que se cargaron los modelos.\n",
 			"Configuration: %s. Check in your client that the models loaded.\n",
@@ -163,14 +180,18 @@ func (installation agentInstallation) applyProfiles(root *os.Root, menu terminal
 	return nil
 }
 
-func skillChanges(destination string) ([]fileChange, []string, error) {
+const delegationInstruction = "Read the [delegation rules](../litespec-shared/delegation.md) before gathering evidence."
+
+var delegationLine = regexp.MustCompile("(?m)^" + regexp.QuoteMeta(delegationInstruction) + `\r?(?:\n|$)`)
+
+func skillChanges(destination string, delegationEnabled bool) ([]fileChange, []string, error) {
 	var changes []fileChange
 	var folders []string
 	err := fs.WalkDir(packageFiles, sourceTree, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if name == sourceTree {
+		if name == sourceTree || name == path.Join(sourceTree, delegationRule) {
 			return nil
 		}
 		target := path.Join(destination, strings.TrimPrefix(name, sourceTree+"/"))
@@ -180,6 +201,9 @@ func skillChanges(destination string) ([]fileChange, []string, error) {
 		}
 		data, err := packageFiles.ReadFile(name)
 		if err == nil {
+			if !delegationEnabled && entry.Name() == "SKILL.md" {
+				data = delegationLine.ReplaceAll(data, nil)
+			}
 			changes = append(changes, fileChange{name: target, content: data})
 		}
 		return err

@@ -4,6 +4,7 @@ description: Revise an active LiteSpec change when user decisions or relevant so
 ---
 
 Read the [shared rules](../litespec-shared/protocol.md).
+Read the [delegation rules](../litespec-shared/delegation.md) before gathering evidence.
 
 1. Identify the change and the decision or source that changed. Ask if ambiguous.
 2. Follow [incremental revision](../litespec-shared/revision.md).

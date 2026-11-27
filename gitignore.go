@@ -49,7 +49,7 @@ func askGitignore(root *os.Root, menu terminal, destinations, folders []string, 
 	fmt.Fprintln(menu.out)
 	fmt.Fprintln(menu.out, menu.text("Skills de LiteSpec instaladas en", "LiteSpec skills installed in"))
 	for _, destination := range destinations {
-		fmt.Fprintln(menu.out, "  • "+destination)
+		fmt.Fprintln(menu.out, "  • "+destination+"/")
 	}
 	if executableName != "" {
 		fmt.Fprintln(menu.out, menu.text("Ejecutable en la raíz del proyecto", "Executable in the project root"))
